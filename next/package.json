@@ -8,11 +8,15 @@
     "start": "next start",
     "animate:creatures": "node work/animate-creatures.mjs",
     "animate:humans": "node work/animate-humans.mjs",
-    "test:animations": "node --test work/check-creature-animations.test.mjs",
+    "test:animations": "node --test work/check-creature-animations.test.mjs work/check-human-animations.test.mjs",
+    "test:lifelike": "node --test work/check-lifelike-behavior.test.mjs work/check-hand-gestures.test.mjs work/check-lifelike-assets.test.mjs work/check-idle-motion.test.mjs",
+    "test:environments": "node --test work/check-environments.test.mjs",
+    "test:fetch": "node --test work/check-ball-physics.test.mjs work/check-fetch-pose.test.mjs work/check-fetch.test.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@fal-ai/client": "1.10.1",
+    "@mediapipe/tasks-vision": "1.0.1",
     "next": "16.3.8",
     "react": "19.3.0",
     "react-dom": "19.3.0",

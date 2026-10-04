@@ -50,7 +50,7 @@ Turns per-frame detections into stable tracked hands ("slots").
 - **Smoothing:** a One Euro filter on each landmark's x and y (min cutoff 1.6 Hz, beta 6). This gives heavy smoothing when the hand is still and low lag when it moves fast.
 - **Pose debounce:** a new pose must be seen for 2 consecutive detections before it's adopted.
 - **Velocity and growth:** computed over a 110 ms window from **unsmoothed** palm positions and log-scale, so filter lag doesn't damp throws. `velocity` is px/s. `growth` is d(ln scale)/dt, which is positive when the hand moves toward the webcam.
-- **Robust scale (`videoPxPerMeter`):** fits the 8 rigid palm bones in the camera-facing XY plane between image and world landmarks. Because both measurements foreshorten together, side/back views no longer collapse the apparent size. Per-frame log-scale changes are capped before a low-beta One Euro filter rejects landmark outliers without making normal reaching sluggish.
+- **Robust scale (`videoPxPerMeter`):** fits the 8 rigid palm bones in the camera-facing XY plane between image and world landmarks. Both measurements foreshorten together, keeping reach and motion normalization robust to hand tilt. Per-frame log-scale changes are capped before a low-beta One Euro filter rejects landmark outliers without making normal reaching sluggish.
 - **Depth calibration:** the median log-scale of the first 20 detections is the rest scale, shared by both hands. `C` (`recalibrate()`) re-collects it. With a pinhole camera model: `distance = REST_CAMERA_DISTANCE × scale_rest / scale_now` and `reach = REST_CAMERA_DISTANCE − distance`, clamped to −0.2…0.45 m. Scale gets its own One Euro filter (on the log, 1.4 Hz / 0.25 beta). `REST_CAMERA_DISTANCE` (0.5 m) is an assumption, but an error in it only scales reach linearly, which the gain absorbs.
 
 ### `pose.ts`
@@ -64,9 +64,9 @@ Classifies from **world landmarks**, so it's invariant to distance and in-plane 
 
 ### `render.ts`
 
-Outlined, cartoon-style silhouettes. All widths are proportional to on-screen hand size, so hands look right at any depth.
+White hands with black outlines and black sleeves, shown from behind with palms facing into the scene. The real palm faces the webcam; the virtual hand keeps the same thumb position, screen motion, and observed size.
 
-- Draw order: a long forearm that widens toward the elbow and joins the palm across the full wrist, followed by fingers, rounded palm, and thumb. One outline pass followed by a solid fill merges overlapping pieces into a cohesive silhouette. A single batched contour stroke marks one inner edge per digit, with another batched stroke for joint creases, so fingers remain readable without per-frame gradients or outlined segments.
+- Draw order: a black sleeve that widens toward the elbow with a subtle cuff, followed by fingers and thumb behind the hand body. When a fingertip folds back into the hand, its distal segments are hidden and the proximal segment forms the visible knuckle. Extended fingers and the thumb retain their tracked positions. One outline pass followed by a solid fill merges overlapping pieces into a cohesive silhouette with no interior contours or crease lines.
 - Pinch shows an amber ring at the pinch point. Petting shows a green ring around the palm. A pose label sits under the wrist.
 - The debug skeleton (`D`) shows the landmarks, the connections between them, and a palm velocity vector.
 
@@ -87,7 +87,7 @@ Outlined, cartoon-style silhouettes. All widths are proportional to on-screen ha
 Turns a `Hand` into a `PlacedHand`:
 
 - `distance = clamp(0.45 + reach × 4, 0.25, 2.2)` m from the eye. A comfortable ~25 cm push maps to about 1 m of virtual reach.
-- Points are rescaled around the palm by `k = (focalPx / distance) / pxPerMeter`, so the hand is drawn at the size perspective implies. At rest `k ≈ 1`, and it shrinks as you reach in.
+- Points, pinch point, and drawing size pass through directly from the mirrored, smoothed screen landmarks. The drawing grows as the real hand moves closer to the webcam; virtual depth only controls interactions and ground shadows.
 - `palmWorld` is the 3D palm position. `handLengthPx` is the *observed* palm length, used to normalize speeds.
 - `drawHandShadows`: an ellipse on the ground under `palmWorld`, squashed by viewing angle and faded with height. It's only visible once the ground under the hand is on screen, i.e. when reaching out.
 

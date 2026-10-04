@@ -24,7 +24,7 @@ src/hands/                Tracking only: no Three.js imports here
 src/world/                3D world + gameplay
   world.ts                Scene, fixed camera, ground, sky, stand, dog placeholder,
                           ball mesh, trail, projection helpers
-  handDepth.ts            Hand → PlacedHand (virtual distance, perspective rescale),
+  handDepth.ts            Hand → PlacedHand (virtual distance, tracked screen size),
                           ground shadows
   interactions.ts         Ball state machine + physics, grab/throw/pet, event emitter
   hearts.ts               2D heart particles
@@ -41,7 +41,9 @@ public/                   Static assets served at / (put models in public/models
 - **Screen**: CSS px, full window. Video is mapped "cover"-style (`toScreen`), so it's cropped, not stretched.
 - **World**: meters, Y up, camera fixed at `(0, 1.4, 0)` looking down −Z. Screen right = +X, into the screen = −Z.
 - **Depth**: bigger hand in the webcam = closer to the *webcam* = **deeper** into the scene. `reach` is meters pushed toward the webcam from the calibrated rest position. `PlacedHand.distance` is the virtual eye-to-palm distance.
-- Hand speeds are normalized by `handLengthPx` (hand-lengths/s) so they don't depend on camera distance. Use `handLengthPx`, not `size` (`size` is rescaled for drawing).
+- Hand drawing follows the mirrored screen landmarks and their observed size, independently of virtual depth.
+- The hand is shown from behind: folded fingertips tuck behind the hand body. Thumb position and gameplay grip coordinates stay as tracked.
+- Hand speeds are normalized by `handLengthPx` (hand-lengths/s) so they don't depend on camera distance. Use `handLengthPx`, not `size` (`size` is the projected wrist-to-knuckle length and foreshortens with hand tilt).
 
 ## Conventions
 

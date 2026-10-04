@@ -1,31 +1,24 @@
 import * as THREE from "three";
-import { creature, radians, up, forward, sideways, tau } from "./creature-animation-tools.mjs";
+import { animationRig, radians, up, forward, sideways, tau } from "./animation-tools.mjs";
 
 export function humanoid(file, profile) {
-  const rig = creature(file);
+  const rig = animationRig(file);
   const { gltf, nodes, rest, scene, worldRotation } = rig;
   const named = name => {
     const index = gltf.nodes.findIndex(node => node.name === name);
     if (index < 0) throw new Error(`${profile.name}: missing joint ${name}`);
     return index;
   };
-  const coarse = profile.name === "Keanu Reeves";
   const bones = {
-    root: named(coarse ? "tripo::Root" : "Root"),
-    chest: named(coarse ? "tripo::Spine_0" : "Spine02"),
-    waist: named(coarse ? "tripo::Spine_0" : "Waist"),
-    neck: named(coarse ? "tripo::Spine_1" : "NeckTwist01"),
-    head: named(coarse ? "tripo::Spine_2" : "Head"),
+    root: named("Root"), chest: named("Chest"), waist: named("Waist"), neck: named("Neck"), head: named("Head"),
     armL: named("L_Upperarm"), elbowL: named("L_Forearm"), handL: named("L_Hand"),
     armR: named("R_Upperarm"), elbowR: named("R_Forearm"), handR: named("R_Hand"),
   };
-  const legs = (coarse ? [[6, 5, 4, 3], [10, 9, 8, 7]]
-    : [[named("L_Thigh"), named("L_Calf"), named("L_Foot"), named("L_ToeBase")],
-      [named("R_Thigh"), named("R_Calf"), named("R_Foot"), named("R_ToeBase")]])
-    .map(([hip, knee, foot, toe]) => ({ hip, knee, foot, toe, target: rest[foot].worldPosition.clone() }));
-  const footErrors = [];
+  const legs = ["L", "R"].map(side => ({ hip: named(`${side}_Thigh`), knee: named(`${side}_Calf`),
+    foot: named(`${side}_Foot`), target: rest[named(`${side}_Foot`)].worldPosition.clone() }));
+  let maxFootError = 0;
   function rotate(index, pitch = 0, yaw = 0, roll = 0) {
-    // Both supplied humans face +X, so world Z is the sagittal pitch axis.
+    // Both replacement meshes face +X: pitch Z, yaw Y, roll X.
     if (pitch) worldRotation(index, sideways, radians(pitch));
     if (yaw) worldRotation(index, up, radians(yaw));
     if (roll) worldRotation(index, forward, radians(roll));
@@ -34,9 +27,9 @@ export function humanoid(file, profile) {
     const pivot = nodes[joint].getWorldPosition(new THREE.Vector3());
     const current = nodes[end].getWorldPosition(new THREE.Vector3()).sub(pivot).normalize();
     const desired = target.clone().sub(pivot).normalize();
-    const world = nodes[joint].getWorldQuaternion(new THREE.Quaternion())
+    const q = nodes[joint].getWorldQuaternion(new THREE.Quaternion())
       .premultiply(new THREE.Quaternion().setFromUnitVectors(current, desired));
-    nodes[joint].quaternion.copy(nodes[joint].parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(world)).normalize();
+    nodes[joint].quaternion.copy(nodes[joint].parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(q)).normalize();
     scene.updateMatrixWorld(true);
   }
   function solve(leg, target) {
@@ -45,28 +38,24 @@ export function humanoid(file, profile) {
     const foot = nodes[leg.foot].getWorldPosition(new THREE.Vector3());
     const upper = hip.distanceTo(knee), lower = knee.distanceTo(foot);
     const direction = target.clone().sub(hip);
-    const distance = THREE.MathUtils.clamp(direction.length(), Math.abs(upper - lower) + 0.000001, upper + lower - 0.000001);
+    const distance = THREE.MathUtils.clamp(direction.length(), Math.abs(upper - lower) + 1e-6, upper + lower - 1e-6);
     direction.normalize();
     const along = (upper * upper - lower * lower + distance * distance) / (2 * distance);
     const height = Math.sqrt(Math.max(0, upper * upper - along * along));
     const bend = forward.clone().addScaledVector(direction, -forward.dot(direction)).normalize();
-    const desiredKnee = hip.clone().addScaledVector(direction, along).addScaledVector(bend, height);
-    align(leg.hip, leg.knee, desiredKnee); align(leg.knee, leg.foot, target);
+    align(leg.hip, leg.knee, hip.clone().addScaledVector(direction, along).addScaledVector(bend, height));
+    align(leg.knee, leg.foot, target);
     nodes[leg.foot].quaternion.copy(nodes[leg.foot].parent.getWorldQuaternion(new THREE.Quaternion()).invert()
       .multiply(rest[leg.foot].worldQuaternion)).normalize();
     scene.updateMatrixWorld(true);
-    footErrors.push(nodes[leg.foot].getWorldPosition(new THREE.Vector3()).distanceTo(target));
+    maxFootError = Math.max(maxFootError, nodes[leg.foot].getWorldPosition(new THREE.Vector3()).distanceTo(target));
   }
   function plant() { legs.forEach(leg => solve(leg, leg.target)); }
-  function lower(amount) {
-    nodes[bones.root].position.y -= amount;
-    scene.updateMatrixWorld(true);
-  }
-  function gait(phase, stride = 0.11, lift = 0.035, duty = 0.62) {
-    lower(0.012 + 0.4 * stride ** 2 + 0.005 * (1 - Math.cos(tau * phase * 2)));
+  function lower(amount) { nodes[bones.root].position.y -= amount; scene.updateMatrixWorld(true); }
+  function gait(phase, stride, lift, duty = 0.62) {
+    lower(0.009 + 0.4 * stride ** 2 + 0.004 * (1 - Math.cos(tau * phase * 2)));
     legs.forEach((leg, index) => {
-      const cycle = (phase + index * 0.5) % 1;
-      const target = leg.target.clone();
+      const cycle = (phase + index * 0.5) % 1, target = leg.target.clone();
       if (cycle < duty) target.x += stride / 2 - stride * cycle / duty;
       else {
         const t = (cycle - duty) / (1 - duty);
@@ -78,10 +67,25 @@ export function humanoid(file, profile) {
       solve(leg, target);
     });
   }
-  function arms(leftPitch = 0, rightPitch = 0, leftBend = 0, rightBend = 0, spread = 0) {
-    rotate(bones.armL, leftPitch, 0, spread); rotate(bones.armR, rightPitch, 0, -spread);
-    rotate(bones.elbowL, leftBend); rotate(bones.elbowR, rightBend);
+  function arm(side, { pitch = 0, spread = 0, twist = 0, bend = 0, wristPitch = 0, wristYaw = 0, wristRoll = 0 } = {}) {
+    const upper = side === "L" ? bones.armL : bones.armR;
+    const elbow = side === "L" ? bones.elbowL : bones.elbowR;
+    const hand = side === "L" ? bones.handL : bones.handR;
+    rotate(upper, pitch, 0, side === "L" ? spread : -spread);
+    if (twist) {
+      const axis = nodes[elbow].getWorldPosition(new THREE.Vector3()).sub(nodes[upper].getWorldPosition(new THREE.Vector3())).normalize();
+      worldRotation(upper, axis, radians(twist));
+    }
+    // The hinge follows the humerus, so elbow flexion stays in one plane.
+    const hinge = rest[elbow].worldPosition.clone().sub(rest[upper].worldPosition).normalize()
+      .cross(forward).normalize().applyQuaternion(nodes[upper].getWorldQuaternion(new THREE.Quaternion()));
+    worldRotation(elbow, hinge, radians(THREE.MathUtils.clamp(bend, 0, 125)));
+    nodes[hand].quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(radians(wristRoll), radians(wristYaw), radians(wristPitch))));
+    scene.updateMatrixWorld(true);
   }
-  return { ...rig, bones, profile, rotate, arms, lower, plant, gait,
-    maxFootError: () => Math.max(0, ...footErrors) };
+  function arms(leftPitch = 0, rightPitch = 0, leftBend = 0, rightBend = 0, spread = 0) {
+    arm("L", { pitch: leftPitch, spread, bend: leftBend });
+    arm("R", { pitch: rightPitch, spread, bend: rightBend });
+  }
+  return { ...rig, bones, profile, rotate, arm, arms, lower, plant, gait, maxFootError: () => maxFootError };
 }

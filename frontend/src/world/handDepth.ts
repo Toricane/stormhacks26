@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { Hand, Vec2 } from "../hands/types";
+import type { Hand } from "../hands/types";
 import type { World } from "./world";
 
 export const PALM_LENGTH = 0.09;
@@ -10,7 +10,7 @@ const REACH_GAIN = 4;
 const VIRTUAL_MIN_DISTANCE = 0.25;
 const VIRTUAL_MAX_DISTANCE = 2.2;
 
-/** A hand placed in the 3D world: drawn at the size perspective implies for its depth. */
+/** A hand with virtual depth for interactions, drawn at its tracked screen size. */
 export type PlacedHand = Hand & {
   /** Virtual eye-to-palm distance in meters. */
   distance: number;
@@ -25,25 +25,15 @@ export function placeHand(hand: Hand, world: World): PlacedHand {
     VIRTUAL_MIN_DISTANCE,
     VIRTUAL_MAX_DISTANCE,
   );
-  // Rescale around the palm so the hand shrinks as it reaches into the scene.
-  const k = world.focalPx() / distance / Math.max(hand.pxPerMeter, 1);
-  const c = hand.palm;
-  const scale = (p: Vec2): Vec2 => ({ x: c.x + (p.x - c.x) * k, y: c.y + (p.y - c.y) * k });
-
   return {
     ...hand,
-    points: hand.points.map(scale),
-    pinchPoint: scale(hand.pinchPoint),
-    // Keep stroke widths anatomical even when the wrist-to-knuckle line is
-    // foreshortened by a side/back view.
-    size: world.focalPx() / distance * PALM_LENGTH,
     distance,
-    palmWorld: world.rayPoint(c, distance),
+    palmWorld: world.rayPoint(hand.palm, distance),
     handLengthPx: hand.pxPerMeter * PALM_LENGTH,
   };
 }
 
-/** Soft contact shadow on the ground under each palm; the main depth cue for 2D-drawn hands. */
+/** Soft contact shadow on the ground under each palm. */
 export function drawHandShadows(ctx: CanvasRenderingContext2D, hands: PlacedHand[], world: World): void {
   const ground = new THREE.Vector3();
   ctx.save();

@@ -1,315 +1,348 @@
 [
   {
-    "file": "/Users/mba/Desktop/coding/stormhacks26/next/public/lebron_james.glb",
-    "joints": 41,
+    "file": "/Users/mba/Desktop/coding/stormhacks26/next/public/lebron-animated.glb",
+    "joints": 23,
     "clips": [
       {
         "name": "Idle",
-        "generator": "creature-animations-v1",
-        "loop": true,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 4.8,
+        "loop": true,
         "fps": 30,
+        "in_place": true,
         "category": "Rest",
-        "description": "Relaxed breathing, small head movements, and subtle shoulder and hand motion."
+        "description": "Relaxed breathing and small head and shoulder movements.",
+        "arm_only": false
       },
       {
         "name": "Wave",
-        "generator": "creature-animations-v1",
-        "loop": false,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 3,
+        "loop": false,
         "fps": 30,
+        "in_place": true,
         "category": "Greeting",
-        "description": "Raises a hand beside his face, waves hello, then lowers it naturally."
+        "description": "Raises his right hand, waves hello, then lowers it; the body stays still.",
+        "arm_only": true
       },
       {
         "name": "Walk",
-        "generator": "creature-animations-v1",
-        "loop": true,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 1.25,
+        "loop": true,
         "fps": 30,
+        "in_place": true,
         "category": "Movement",
-        "description": "A grounded alternating walk with opposite arm swings, ready for hand-target steering."
+        "description": "Grounded alternating steps and opposite arm swings, ready for hand-target steering.",
+        "arm_only": false
       },
       {
         "name": "Jog",
-        "generator": "creature-animations-v1",
-        "loop": true,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 0.85,
+        "loop": true,
         "fps": 30,
+        "in_place": true,
         "category": "Movement",
-        "description": "A quicker approach gait with bent elbows and higher steps; no horizontal root motion."
+        "description": "Quicker approach steps with bent elbows and higher foot lifts; stays in place.",
+        "arm_only": false
       },
       {
         "name": "Headpat",
-        "generator": "creature-animations-v1",
-        "loop": false,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 3.4,
+        "loop": false,
         "fps": 30,
+        "in_place": true,
         "category": "Affection",
-        "description": "Ducks for a headpat, does three exaggerated pleased head bobs, then stands tall again."
+        "description": "Ducks for a headpat and does three comically pleased head bobs.",
+        "arm_only": false
       },
       {
         "name": "Petting",
-        "generator": "creature-animations-v1",
-        "loop": true,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 2.8,
+        "loop": true,
         "fps": 30,
+        "in_place": true,
         "category": "Affection",
-        "description": "A deliberately silly head-scratch reaction: relaxed shoulders, a tilted head, and a contented sway."
+        "description": "A silly head-scratch reaction with relaxed arms, a tilted head, and a contented sway.",
+        "arm_only": false
       },
       {
         "name": "Curious",
-        "generator": "creature-animations-v1",
-        "loop": false,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 3.2,
+        "loop": false,
         "fps": 30,
+        "in_place": true,
         "category": "Attention",
-        "description": "Looks toward a hand and tips his head as if listening, then returns to neutral."
+        "description": "Looks toward a hand and tips his head as if listening.",
+        "arm_only": false
       },
       {
         "name": "Nod",
-        "generator": "creature-animations-v1",
-        "loop": false,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 2.2,
+        "loop": false,
         "fps": 30,
+        "in_place": true,
         "category": "Attention",
-        "description": "Two gentle acknowledgement nods with a slight chest follow-through."
+        "description": "Two gentle acknowledgement nods.",
+        "arm_only": false
       },
       {
         "name": "High five",
-        "generator": "creature-animations-v1",
-        "loop": false,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 3,
+        "loop": false,
         "fps": 30,
+        "in_place": true,
         "category": "Greeting",
-        "description": "Offers a raised palm in front of his shoulder, holds it briefly, then lowers his arm."
+        "description": "Offers his right palm and holds it briefly; the body stays still.",
+        "arm_only": true
       },
       {
         "name": "Beckon",
-        "generator": "creature-animations-v1",
-        "loop": false,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 3,
+        "loop": false,
         "fps": 30,
+        "in_place": true,
         "category": "Greeting",
-        "description": "Bends a raised forearm toward himself twice in a friendly come-here gesture."
+        "description": "Curls his raised right forearm toward himself twice; the body stays still.",
+        "arm_only": true
       },
       {
         "name": "Celebrate",
-        "generator": "creature-animations-v1",
-        "loop": false,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 3.2,
+        "loop": false,
         "fps": 30,
+        "in_place": true,
         "category": "Reaction",
-        "description": "An energetic two-arm cheer with a small knee bounce and a proud head lift."
+        "description": "An energetic two-arm cheer and small knee bounce.",
+        "arm_only": false
       },
       {
         "name": "Shrug",
-        "generator": "creature-animations-v1",
-        "loop": false,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 2.8,
+        "loop": false,
         "fps": 30,
+        "in_place": true,
         "category": "Reaction",
-        "description": "Raises his shoulders and opens his hands in a playful what-was-that reaction."
+        "description": "A playful two-arm shrug with upturned hands.",
+        "arm_only": true
       },
       {
         "name": "Startled",
-        "generator": "creature-animations-v1",
-        "loop": false,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 1.8,
+        "loop": false,
         "fps": 30,
+        "in_place": true,
         "category": "Reaction",
-        "description": "A quick recoil with raised hands and bent knees, followed by a slower relaxed recovery."
+        "description": "Quickly recoils with raised hands and bent knees, then relaxes.",
+        "arm_only": false
       },
       {
         "name": "Drowsy",
-        "generator": "creature-animations-v1",
-        "loop": true,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 5.6,
+        "loop": true,
         "fps": 30,
+        "in_place": true,
         "category": "Rest",
-        "description": "Slow breathing and a gently bowed, bobbing head with relaxed arms."
+        "description": "Slow breathing and a gently bowed, bobbing head.",
+        "arm_only": false
       }
     ],
-    "preservedSourceBinary": true,
     "character": "LeBron James",
-    "maxFootError": 0.000001760760443673763,
-    "rigRepair": null,
-    "skinRepair": {
-      "version": 2,
-      "correctedVertices": 159553,
-      "originalBinaryLength": 59194984,
-      "description": "Arm/torso influences separated using mesh surface distances."
+    "maxFootError": 1.714131521035004e-16,
+    "rig": {
+      "version": 1,
+      "source": "lebron.glb",
+      "joints": 23,
+      "sourceBinaryLength": 45263164,
+      "armCut": 0.21,
+      "method": "Anatomical skeleton; surface-connected arm ownership with a blended shoulder band and hard body anchors.",
+      "forward": "+X",
+      "up": "+Y",
+      "left": "-Z"
     }
   },
   {
-    "file": "/Users/mba/Desktop/coding/stormhacks26/next/public/keanu_reeves.glb",
-    "joints": 18,
+    "file": "/Users/mba/Desktop/coding/stormhacks26/next/public/keanu-animated.glb",
+    "joints": 23,
     "clips": [
       {
         "name": "Idle",
-        "generator": "creature-animations-v1",
-        "loop": true,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 4.8,
+        "loop": true,
         "fps": 30,
+        "in_place": true,
         "category": "Rest",
-        "description": "Relaxed breathing, small head movements, and subtle shoulder and hand motion."
+        "description": "Relaxed breathing and small head and shoulder movements.",
+        "arm_only": false
       },
       {
         "name": "Wave",
-        "generator": "creature-animations-v1",
-        "loop": false,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 3.4,
+        "loop": false,
         "fps": 30,
+        "in_place": true,
         "category": "Greeting",
-        "description": "Raises a hand beside his face, waves hello, then lowers it naturally."
+        "description": "Raises his right hand, waves hello, then lowers it; the body stays still.",
+        "arm_only": true
       },
       {
         "name": "Walk",
-        "generator": "creature-animations-v1",
-        "loop": true,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 1.45,
+        "loop": true,
         "fps": 30,
+        "in_place": true,
         "category": "Movement",
-        "description": "A grounded alternating walk with opposite arm swings, ready for hand-target steering."
+        "description": "Grounded alternating steps and opposite arm swings, ready for hand-target steering.",
+        "arm_only": false
       },
       {
         "name": "Jog",
-        "generator": "creature-animations-v1",
-        "loop": true,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 1,
+        "loop": true,
         "fps": 30,
+        "in_place": true,
         "category": "Movement",
-        "description": "A quicker approach gait with bent elbows and higher steps; no horizontal root motion."
+        "description": "Quicker approach steps with bent elbows and higher foot lifts; stays in place.",
+        "arm_only": false
       },
       {
         "name": "Headpat",
-        "generator": "creature-animations-v1",
-        "loop": false,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 3.4,
+        "loop": false,
         "fps": 30,
+        "in_place": true,
         "category": "Affection",
-        "description": "Politely ducks for a headpat and leans into it with a comically content head tilt."
+        "description": "Politely ducks and leans into a headpat with a contented head tilt.",
+        "arm_only": false
       },
       {
         "name": "Petting",
-        "generator": "creature-animations-v1",
-        "loop": true,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 2.8,
+        "loop": true,
         "fps": 30,
+        "in_place": true,
         "category": "Affection",
-        "description": "A deliberately silly head-scratch reaction: relaxed shoulders, a tilted head, and a contented sway."
+        "description": "A silly head-scratch reaction with relaxed arms, a tilted head, and a contented sway.",
+        "arm_only": false
       },
       {
         "name": "Curious",
-        "generator": "creature-animations-v1",
-        "loop": false,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 3.2,
+        "loop": false,
         "fps": 30,
+        "in_place": true,
         "category": "Attention",
-        "description": "Looks toward a hand and tips his head as if listening, then returns to neutral."
+        "description": "Looks toward a hand and tips his head as if listening.",
+        "arm_only": false
       },
       {
         "name": "Nod",
-        "generator": "creature-animations-v1",
-        "loop": false,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 2.2,
+        "loop": false,
         "fps": 30,
+        "in_place": true,
         "category": "Attention",
-        "description": "Two gentle acknowledgement nods with a slight chest follow-through."
+        "description": "Two gentle acknowledgement nods.",
+        "arm_only": false
       },
       {
         "name": "High five",
-        "generator": "creature-animations-v1",
-        "loop": false,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 3,
+        "loop": false,
         "fps": 30,
+        "in_place": true,
         "category": "Greeting",
-        "description": "Offers a raised palm in front of his shoulder, holds it briefly, then lowers his arm."
+        "description": "Offers his right palm and holds it briefly; the body stays still.",
+        "arm_only": true
       },
       {
         "name": "Beckon",
-        "generator": "creature-animations-v1",
-        "loop": false,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 3,
+        "loop": false,
         "fps": 30,
+        "in_place": true,
         "category": "Greeting",
-        "description": "Bends a raised forearm toward himself twice in a friendly come-here gesture."
+        "description": "Curls his raised right forearm toward himself twice; the body stays still.",
+        "arm_only": true
       },
       {
         "name": "Celebrate",
-        "generator": "creature-animations-v1",
-        "loop": false,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 3.2,
+        "loop": false,
         "fps": 30,
+        "in_place": true,
         "category": "Reaction",
-        "description": "A restrained victory gesture with a raised fist, small bounce, and appreciative nod."
+        "description": "A restrained raised-hand victory gesture, small bounce, and appreciative nod.",
+        "arm_only": false
       },
       {
         "name": "Shrug",
-        "generator": "creature-animations-v1",
-        "loop": false,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 2.8,
+        "loop": false,
         "fps": 30,
+        "in_place": true,
         "category": "Reaction",
-        "description": "Raises his shoulders and opens his hands in a playful what-was-that reaction."
+        "description": "A playful two-arm shrug with upturned hands.",
+        "arm_only": true
       },
       {
         "name": "Startled",
-        "generator": "creature-animations-v1",
-        "loop": false,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 1.8,
+        "loop": false,
         "fps": 30,
+        "in_place": true,
         "category": "Reaction",
-        "description": "A quick recoil with raised hands and bent knees, followed by a slower relaxed recovery."
+        "description": "Quickly recoils with raised hands and bent knees, then relaxes.",
+        "arm_only": false
       },
       {
         "name": "Drowsy",
-        "generator": "creature-animations-v1",
-        "loop": true,
-        "in_place": true,
+        "generator": "human-interactions-v1",
         "duration": 5.6,
+        "loop": true,
         "fps": 30,
+        "in_place": true,
         "category": "Rest",
-        "description": "Slow breathing and a gently bowed, bobbing head with relaxed arms."
+        "description": "Slow breathing and a gently bowed, bobbing head.",
+        "arm_only": false
       }
     ],
-    "preservedSourceBinary": true,
     "character": "Keanu Reeves",
-    "maxFootError": 0.00000143038514916718,
-    "rigRepair": {
-      "version": 3,
-      "originalJoints": 15,
-      "joints": 18,
-      "originalBinaryLength": 58585484,
-      "description": "Shoulder/elbow pivots and arm weights repaired for humanoid motion."
-    },
-    "skinRepair": null
+    "maxFootError": 1.8670653977139892e-16,
+    "rig": {
+      "version": 1,
+      "source": "keanu.glb",
+      "joints": 23,
+      "sourceBinaryLength": 43063632,
+      "armCut": 0.16,
+      "method": "Anatomical skeleton; surface-connected arm ownership with a blended shoulder band and hard body anchors.",
+      "forward": "+X",
+      "up": "+Y",
+      "left": "-Z"
+    }
   }
 ]

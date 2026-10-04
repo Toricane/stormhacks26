@@ -1,0 +1,156 @@
+import type { Hand, Vec2 } from "./types";
+
+const HAND_FILL = "#ffffff";
+const SLEEVE_FILL = "#111214";
+const CUFF_FILL = "#25262a";
+const OUTLINE = "#111214";
+const SLEEVE_LENGTH = 3.2;
+const CUFF_OFFSET = 0.16;
+const CUFF_LENGTH = 0.18;
+const TUCKED_TIP_FORWARD = 0.08;
+const TUCKED_TIP_RETURN = 0.15;
+
+/** Drawn back to front: pinky first so the index finger overlaps it. */
+const FINGERS: { chain: number[]; width: number }[] = [
+  { chain: [17, 18, 19, 20], width: 0.2 },
+  { chain: [13, 14, 15, 16], width: 0.235 },
+  { chain: [9, 10, 11, 12], width: 0.25 },
+  { chain: [5, 6, 7, 8], width: 0.24 },
+];
+const THUMB = { chain: [1, 2, 3, 4], width: 0.27 };
+const PALM = [1, 5, 9, 13, 17];
+
+function drawFinger(
+  ctx: CanvasRenderingContext2D,
+  pts: Vec2[],
+  chain: number[],
+  width: number,
+  extra: number,
+  color: string,
+  visibleJoints = chain.length,
+): void {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width + extra;
+  ctx.beginPath();
+  ctx.moveTo(pts[chain[0]].x, pts[chain[0]].y);
+  for (let i = 1; i < visibleJoints; i++) ctx.lineTo(pts[chain[i]].x, pts[chain[i]].y);
+  ctx.stroke();
+}
+
+function handBasis(pts: Vec2[]): { dx: number; dy: number; nx: number; ny: number } {
+  let dx = pts[0].x - pts[9].x;
+  let dy = pts[0].y - pts[9].y;
+  const length = Math.hypot(dx, dy) || 1;
+  dx /= length;
+  dy /= length;
+  let nx = -dy;
+  let ny = dx;
+  if ((pts[1].x - pts[0].x) * nx + (pts[1].y - pts[0].y) * ny < 0) {
+    nx *= -1;
+    ny *= -1;
+  }
+  return { dx, dy, nx, ny };
+}
+
+function drawSleeve(
+  ctx: CanvasRenderingContext2D,
+  pts: Vec2[],
+  u: number,
+  extra: number,
+  color: string,
+): void {
+  const wrist = pts[0];
+  const { dx, dy, nx, ny } = handBasis(pts);
+  const end = { x: wrist.x + dx * u * SLEEVE_LENGTH, y: wrist.y + dy * u * SLEEVE_LENGTH };
+  const wristHalf = u * 0.38 + extra / 2;
+  const endHalf = u * 0.48 + extra / 2;
+
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(wrist.x + nx * wristHalf, wrist.y + ny * wristHalf);
+  ctx.lineTo(end.x + nx * endHalf, end.y + ny * endHalf);
+  ctx.quadraticCurveTo(end.x + dx * u * 0.18, end.y + dy * u * 0.18, end.x - nx * endHalf, end.y - ny * endHalf);
+  ctx.lineTo(wrist.x - nx * wristHalf, wrist.y - ny * wristHalf);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawCuff(ctx: CanvasRenderingContext2D, pts: Vec2[], u: number): void {
+  const wrist = pts[0];
+  const { dx, dy, nx, ny } = handBasis(pts);
+  const startX = wrist.x + dx * u * CUFF_OFFSET;
+  const startY = wrist.y + dy * u * CUFF_OFFSET;
+  const endX = startX + dx * u * CUFF_LENGTH;
+  const endY = startY + dy * u * CUFF_LENGTH;
+  const half = u * 0.38;
+
+  ctx.fillStyle = CUFF_FILL;
+  ctx.beginPath();
+  ctx.moveTo(startX + nx * half, startY + ny * half);
+  ctx.lineTo(endX + nx * half, endY + ny * half);
+  ctx.lineTo(endX - nx * half, endY - ny * half);
+  ctx.lineTo(startX - nx * half, startY - ny * half);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawHandBack(
+  ctx: CanvasRenderingContext2D,
+  pts: Vec2[],
+  u: number,
+  extra: number,
+  color: string,
+): void {
+  const { nx, ny } = handBasis(pts);
+  const wristThumb = { x: pts[0].x + nx * u * 0.34, y: pts[0].y + ny * u * 0.34 };
+  const wristPinky = { x: pts[0].x - nx * u * 0.34, y: pts[0].y - ny * u * 0.34 };
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = u * 0.22 + extra;
+  ctx.beginPath();
+  ctx.moveTo(wristThumb.x, wristThumb.y);
+  for (const index of PALM) ctx.lineTo(pts[index].x, pts[index].y);
+  ctx.lineTo(wristPinky.x, wristPinky.y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+}
+
+function drawAnatomy(ctx: CanvasRenderingContext2D, pts: Vec2[], u: number, extra: number, color: string): void {
+  const { dx, dy } = handBasis(pts);
+  for (const f of FINGERS) {
+    const base = pts[f.chain[0]];
+    const knuckle = pts[f.chain[1]];
+    const tip = pts[f.chain[3]];
+    const tipForward = -(tip.x - base.x) * dx - (tip.y - base.y) * dy;
+    const tipReturn = (tip.x - knuckle.x) * dx + (tip.y - knuckle.y) * dy;
+    // A camera-facing palm becomes a back-of-hand view: folded tips tuck away
+    // behind the hand, leaving the proximal segment and knuckle visible.
+    const tucked = tipForward < u * TUCKED_TIP_FORWARD && tipReturn > u * TUCKED_TIP_RETURN;
+    drawFinger(ctx, pts, f.chain, u * f.width, extra, color, tucked ? 2 : f.chain.length);
+  }
+  drawFinger(ctx, pts, THUMB.chain, u * THUMB.width, extra, color);
+  drawHandBack(ctx, pts, u, extra, color);
+}
+
+export function drawHand(ctx: CanvasRenderingContext2D, hand: Hand): void {
+  const pts = hand.points;
+  const u = Math.max(hand.size, 20);
+  const outline = Math.max(1.5, u * 0.04);
+
+  ctx.save();
+  ctx.globalAlpha = hand.presence;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  drawSleeve(ctx, pts, u, outline * 2, OUTLINE);
+  drawSleeve(ctx, pts, u, 0, SLEEVE_FILL);
+  drawCuff(ctx, pts, u);
+
+  // Drawing the whole outline first and the whole fill second makes overlapping
+  // segments read as one silhouette instead of a stack of outlined capsules.
+  drawAnatomy(ctx, pts, u, outline * 2, OUTLINE);
+  drawAnatomy(ctx, pts, u, 0, HAND_FILL);
+
+  ctx.restore();
+}

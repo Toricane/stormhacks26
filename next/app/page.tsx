@@ -1,10 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { modelUrl, outputFiles, type Artifact } from "@/lib/artifacts";
 import { validateGlb } from "@/lib/glb";
 import { RIG_TYPES, type RigType } from "@/lib/rig-types";
+import { ENVIRONMENTS, type EnvironmentId } from "@/lib/environments/study-lounge";
+import type { ViewerView } from "@/components/viewer";
 
 const Viewer = dynamic(() => import("@/components/viewer"), { ssr: false });
 type Result = Record<string, unknown>;
@@ -18,6 +20,15 @@ async function json<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export default function Page() {
+  const [tab, setTab] = useState<"view" | "generate">("view");
+  const [view, setView] = useState<ViewerView>("model");
+  const [environmentId, setEnvironmentId] = useState<EnvironmentId>("default");
+  const [scene, setScene] = useState({ url: "/dog-animated.glb", view: "model" as ViewerView, environmentId: "default" as EnvironmentId });
+  const [sceneActive, setSceneActive] = useState(false);
+  const onEnvironmentChange = useCallback((id: EnvironmentId) => {
+    setEnvironmentId(id);
+    setScene(previous => ({ ...previous, environmentId: id }));
+  }, []);
   const [image, setImage] = useState<File | null>(null);
   const [rigType, setRigType] = useState<RigType | "none">("quadruped");
   const [preview, setPreview] = useState("");
@@ -27,8 +38,8 @@ export default function Page() {
   const [artifacts, setArtifacts] = useState<Artifact[]>([
     { name: "Animated dog.glb", url: "/dog-animated.glb", kind: "model" },
     { name: "Animated Pikachu.glb", url: "/Pikachu.glb", kind: "model" },
-    { name: "Animated LeBron James.glb", url: "/lebron_james.glb", kind: "model" },
-    { name: "Animated Keanu Reeves.glb", url: "/keanu_reeves.glb", kind: "model" },
+    { name: "Animated LeBron James.glb", url: "/lebron-animated.glb", kind: "model" },
+    { name: "Animated Keanu Reeves.glb", url: "/keanu-animated.glb", kind: "model" },
   ]);
   const [selected, setSelected] = useState("/dog-animated.glb");
   const [uploadError, setUploadError] = useState("");
@@ -37,7 +48,7 @@ export default function Page() {
   const active = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (!image) return;
+    if (!image) { setPreview(""); return; }
     const url = URL.createObjectURL(image);
     setPreview(url);
     return () => URL.revokeObjectURL(url);
@@ -60,7 +71,7 @@ export default function Page() {
       await validateGlb(file);
       const url = blobUrl(file);
       setArtifacts(previous => [...previous, { name: file.name, url, kind: "model" }]);
-      setSelected(url);
+      setSelected(url); setSceneActive(false);
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "Could not open GLB.");
     }
@@ -89,7 +100,7 @@ export default function Page() {
     }));
     setArtifacts(previous => [...previous, ...saved]);
     const model = saved.find(file => file.kind === "model");
-    if (model) setSelected(model.url);
+    if (model) { setSelected(model.url); setSceneActive(false); }
   }
 
   async function poll(provider: "fal" | "tripo", taskId: string, label: string, signal: AbortSignal) {
@@ -125,7 +136,7 @@ export default function Page() {
       if (!meshUrl) throw new Error(`Trellis returned no GLB file. Response fields: ${Object.keys(trellis).join(", ")}. See Trellis.json below.`);
 
       if (rigType === "none") {
-        setStatus("Done. Rigging skipped. Select the generated model below to inspect it.");
+        setStatus("Done. Rigging skipped. Open View to inspect your model.");
         return;
       }
 
@@ -148,7 +159,7 @@ export default function Page() {
       const rigged = await poll("tripo", rigging.taskId, `Auto rigging ${rigType}`, signal);
       await keepOutputs("Auto rig", rigged, signal);
       if (!modelUrl(rigged)) throw new Error("Tripo returned no rigged GLB. Check the Auto rig report below.");
-      setStatus("Done. Select a model below to inspect it.");
+      setStatus("Done. Open View to inspect your model.");
     } catch (error) {
       if (!signal.aborted) {
         setError(error instanceof Error ? error.message : "Pipeline failed.");
@@ -161,50 +172,108 @@ export default function Page() {
 
   const models = artifacts.filter(file => file.kind === "model");
   return (
-    <main>
-      <h1>GLB viewer</h1>
-      <h2>Generate a model</h2>
-      <p>Upload a character or creature image. Choose a rig type, or select No rigging to keep the generated GLB.</p>
-      <div className="row">
-        <label>Image <input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={event => setImage(event.target.files?.[0] || null)} /></label>
-        <label>Rig type <select value={rigType} disabled={busy} onChange={event => setRigType(event.target.value as RigType | "none")}>
-          <option value="none">No rigging</option>
-          {RIG_TYPES.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
-        </select></label>
-        <button onClick={run} disabled={!image || busy}>{busy ? "Processing…" : rigType === "none" ? "Generate" : "Generate & rig"}</button>
-      </div>
-      <p className="muted">PNG, JPG, WebP · max 10 MB</p>
-      {preview && <img className="preview" src={preview} alt="Input character or creature" />}
-      <p role="status">{status}</p>
-      {error && <p className="error" role="alert">{error}</p>}
-      {check && <details open><summary>Rig check result</summary><pre>{JSON.stringify(check, null, 2)}</pre></details>}
-      <section>
-        <h2>Upload & select GLB</h2>
-        <div className="row">
-          <label>GLB file <input type="file" accept=".glb,model/gltf-binary" onChange={event => {
-            const file = event.target.files?.[0];
-            if (file) void uploadGlb(file);
-            event.target.value = "";
-          }} /></label>
-        </div>
-        {uploadError && <p className="error" role="alert">{uploadError}</p>}
-        <label>Model <select value={selected} onChange={event => setSelected(event.target.value)}>
-          {models.map(file => <option key={file.url} value={file.url}>{file.name}</option>)}
-        </select></label>
-        <p className="muted">Uploaded and generated GLBs stay available in this tab.</p>
-        <h2>Inspect model</h2>
-        <Viewer key={selected} url={selected} />
-      </section>
-      {artifacts.length > 0 && <section>
-        <h2>Models & byproducts</h2>
-        {artifacts.map((file, index) => <div className="artifact" key={`${index}-${file.url}`}>
-          {file.kind === "image" && <img className="preview" src={file.url} alt={file.name} />}
-          <span>{file.name}{file.warning && <small className="error"> · {file.warning}</small>}</span>
-          {file.kind === "model" && <button onClick={() => setSelected(file.url)}>View</button>}
-          <a className="download" href={file.url} download={file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}>Download</a>
-        </div>)}
-        <p className="muted">Outputs are kept in this tab. Download them before closing or refreshing it.</p>
-      </section>}
-    </main>
+    <div className="app-shell">
+      <header className="toolbar">
+        <a className="brand" href="/" aria-label="Studio home"><span className="brand-mark" aria-hidden="true">S</span><span>Studio</span></a>
+        <nav className="tabs" aria-label="Workspace">
+          <button aria-pressed={tab === "view"} onClick={() => setTab("view")}>View</button>
+          <button aria-pressed={tab === "generate"} onClick={() => { setTab("generate"); setSceneActive(false); }}>Generate</button>
+        </nav>
+      </header>
+      <main>
+        {tab === "view" ? <>
+          <div className="page-heading"><h1>View</h1><p className="muted">Explore an environment or bring a character into it.</p></div>
+          <div className="view-workspace">
+            <aside className="view-settings" aria-label="View settings">
+              <label className="field">View type
+                <select value={view} onChange={event => { setView(event.target.value as ViewerView); setSceneActive(false); }}>
+                  <option value="model">Model</option>
+                  <option value="animation">Animation</option>
+                  <option value="firstPerson">First person</option>
+                  <option value="lifelike">Lifelike</option>
+                </select>
+              </label>
+              <label className="field">Environment
+                <select value={environmentId} onChange={event => { setEnvironmentId(event.target.value as EnvironmentId); setSceneActive(false); }}>
+                  {ENVIRONMENTS.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}
+                </select>
+              </label>
+              <div className="model-settings">
+                <label className="field">Model <span className="optional">Optional</span>
+                  <select value={selected} onChange={event => { setSelected(event.target.value); setSceneActive(false); }}>
+                    <option value="">No model</option>
+                    {models.map(file => <option key={file.url} value={file.url}>{file.name}</option>)}
+                  </select>
+                </label>
+                <p className="field-hint">Choose No model to explore on your own.</p>
+                <label className="field upload-field">Upload a model
+                  <input type="file" accept=".glb,model/gltf-binary" onChange={event => {
+                    const file = event.target.files?.[0];
+                    if (file) void uploadGlb(file);
+                    event.target.value = "";
+                  }} />
+                </label>
+                {uploadError && <p className="error" role="alert">{uploadError}</p>}
+              </div>
+              <button className="primary-button activate-view" onClick={() => {
+                setScene({ url: selected, view, environmentId }); setSceneActive(true);
+              }}>View</button>
+              <p className="scene-state" role="status">{sceneActive ? "Scene active" : "Scene paused · click View to start"}</p>
+            </aside>
+            <section className="viewer-panel" aria-label="Scene preview">
+              <Viewer key={scene.url} url={scene.url} view={scene.view} environmentId={scene.environmentId} onEnvironmentChange={onEnvironmentChange} active={sceneActive} />
+            </section>
+          </div>
+        </> : <>
+          <div className="page-heading"><h1>Generate</h1><p className="muted">Create a model from an image.</p></div>
+          <div className="generate-workspace">
+            <section className="panel">
+              <h2>Model</h2>
+              <p className="muted">Upload an image and choose how to rig your model.</p>
+              <label className="field">Image
+                <input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={event => setImage(event.target.files?.[0] || null)} />
+              </label>
+              <p className="field-hint">PNG, JPG, WebP · max 10 MB</p>
+              {preview && <img className="preview" src={preview} alt="Input character or creature" />}
+              <label className="field">Rig type
+                <select value={rigType} disabled={busy} onChange={event => setRigType(event.target.value as RigType | "none")}>
+                  <option value="none">No rigging</option>
+                  {RIG_TYPES.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
+                </select>
+              </label>
+              <button className="primary-button" onClick={run} disabled={!image || busy}>{busy ? "Processing…" : rigType === "none" ? "Generate model" : "Generate & rig"}</button>
+              {status && <p role="status">{status}</p>}
+              {error && <p className="error" role="alert">{error}</p>}
+              {check && <details><summary>Rig check result</summary><pre>{JSON.stringify(check, null, 2)}</pre></details>}
+            </section>
+            <div className="deferred-generators">
+              <section className="panel placeholder-panel" aria-label="Behavior generator, coming soon">
+                <div className="panel-heading"><h2>Behavior</h2><span className="coming-soon">Coming soon</span></div>
+                <p className="muted">Define how your character acts and responds.</p>
+              </section>
+              <section className="panel placeholder-panel">
+                <div className="panel-heading"><h2>Image</h2><span className="coming-soon">Coming soon</span></div>
+                <p className="muted">Create an image from a reference and an optional prompt.</p>
+                <fieldset disabled>
+                  <label className="field">Reference image<input type="file" accept="image/png,image/jpeg,image/webp" /></label>
+                  <label className="field">Prompt <span className="optional">Optional</span><textarea rows={2} placeholder="Describe your image" /></label>
+                  <button>Generate image</button>
+                </fieldset>
+              </section>
+            </div>
+          </div>
+          {artifacts.length > 0 && <section className="panel outputs">
+            <h2>Library & downloads</h2>
+            {artifacts.map((file, index) => <div className="artifact" key={`${index}-${file.url}`}>
+              {file.kind === "image" && <img className="artifact-preview" src={file.url} alt={file.name} />}
+              <span>{file.name}{file.warning && <small className="error"> · {file.warning}</small>}</span>
+              {file.kind === "model" && <button onClick={() => { setSelected(file.url); setSceneActive(false); setTab("view"); }}>View</button>}
+              <a className="download" href={file.url} download={file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}>Download</a>
+            </div>)}
+            <p className="field-hint">Uploads and generated files stay in this tab. Download them before refreshing or closing it.</p>
+          </section>}
+        </>}
+      </main>
+    </div>
   );
 }

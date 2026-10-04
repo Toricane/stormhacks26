@@ -1,143 +1,109 @@
 import fs from "node:fs";
 import assert from "node:assert/strict";
-import { tau, smooth, envelope } from "./creature-animation-tools.mjs";
+import { tau, smooth, envelope } from "./animation-tools.mjs";
 import { humanoid } from "./humanoid-animation-tools.mjs";
-import { prepareKeanuRig } from "./prepare-keanu-rig.mjs";
-import { prepareLebronSkin } from "./prepare-lebron-skin.mjs";
+import { humanProfiles, prepareHumanoidRig } from "./rig-humans.mjs";
 
-const profiles = [
-  { file: "lebron_james.glb", name: "LeBron James", energy: 1, waveCount: 3, stride: 0.12, duck: 0.04, exuberant: true },
-  { file: "keanu_reeves.glb", name: "Keanu Reeves", energy: 0.72, waveCount: 2, stride: 0.10, duck: 0.028, exuberant: false },
-];
-await prepareKeanuRig(new URL("../public/keanu_reeves.glb", import.meta.url));
-await prepareLebronSkin(new URL("../public/lebron_james.glb", import.meta.url));
-
-const report = profiles.map(profile => {
-  const rig = humanoid(new URL(`../public/${profile.file}`, import.meta.url), profile);
-  const { nodes, bones: b, clip, rotate, arms, lower, plant, gait } = rig;
+const report = humanProfiles.map(profile => {
+  const rig = humanoid(prepareHumanoidRig(profile), profile);
+  const { nodes, bones: b, clip, rotate, arm, arms, lower, plant, gait } = rig;
   const energy = profile.energy;
-  clip("Idle", 4.8, true, "Rest", "Relaxed breathing, small head movements, and subtle shoulder and hand motion.", phase => {
+  clip("Idle", 4.8, true, "Rest", "Relaxed breathing and small head and shoulder movements.", phase => {
     const sway = Math.sin(tau * phase), breath = 1 - Math.cos(tau * phase);
-    rotate(b.chest, 0.45 * sway, 0.7 * sway, 0.5 * sway);
-    rotate(b.neck, -0.4 * breath, 1.5 * Math.sin(tau * phase * 2), -0.5 * sway);
-    rotate(b.head, 0, 0.7 * sway);
-    arms(0.7 * sway, -0.7 * sway, 2 + 0.5 * sway, 2 - 0.5 * sway, 1);
-    nodes[b.chest].scale.y *= 1 + 0.002 * breath;
+    rotate(b.chest, 0.3 * sway, 0.5 * sway, 0.35 * sway);
+    rotate(b.neck, -0.3 * breath, 1 * Math.sin(tau * phase * 2), -0.4 * sway);
+    arms(0.5 * sway, -0.5 * sway, 2 + 0.4 * sway, 2 - 0.4 * sway, 0.5);
+    nodes[b.chest].scale.y *= 1 + 0.0015 * breath;
   });
-  clip("Wave", profile.exuberant ? 3 : 3.4, false, "Greeting", "Raises a hand beside his face, waves hello, then lowers it naturally.", phase => {
-    const amount = envelope(phase, 0.2, 0.24);
-    const wave = Math.sin(tau * profile.waveCount * smooth((phase - 0.2) / 0.56));
-    rotate(b.armR, 5 * amount, 0, -64 * amount);
-    rotate(b.elbowR, 0, 0, (-112 + 15 * wave) * amount);
-    rotate(b.handR, 6 * wave * amount, 12 * amount, -8 * wave * amount);
-    rotate(b.neck, 0, -5 * amount, 3 * amount);
-    rotate(b.chest, 0, -3 * amount);
-  });
-  clip("Walk", profile.exuberant ? 1.25 : 1.45, true, "Movement", "A grounded alternating walk with opposite arm swings, ready for hand-target steering.", phase => {
+  clip("Wave", profile.exuberant ? 3 : 3.4, false, "Greeting", "Raises his right hand, waves hello, then lowers it; the body stays still.", phase => {
+    const amount = envelope(phase, 0.24, 0.28);
+    const wave = Math.sin(tau * profile.waveCount * smooth((phase - 0.24) / 0.48));
+    arm("R", { pitch: 15 * amount, spread: 50 * amount, twist: 90 * amount,
+      bend: (112 + 8 * wave) * amount, wristRoll: 8 * wave * amount, wristYaw: 8 * amount });
+  }, true);
+  clip("Walk", profile.exuberant ? 1.25 : 1.45, true, "Movement", "Grounded alternating steps and opposite arm swings, ready for hand-target steering.", phase => {
     const step = Math.sin(tau * phase);
-    rotate(b.chest, 1, 2.5 * step, 0.8 * step);
-    arms(-11 * step, 11 * step, 7, 7, 2);
-    rotate(b.neck, -1 * Math.sin(tau * phase * 2), -1.5 * step);
-    gait(phase, profile.stride, 0.035);
+    rotate(b.chest, 0.7, 2 * step, 0.6 * step);
+    arms(-10 * step, 10 * step, 6, 6, 1);
+    rotate(b.neck, -0.6 * Math.sin(tau * phase * 2), -1.2 * step);
+    gait(phase, profile.stride, 0.032);
   });
-  clip("Jog", profile.exuberant ? 0.85 : 1, true, "Movement", "A quicker approach gait with bent elbows and higher steps; no horizontal root motion.", phase => {
+  clip("Jog", profile.exuberant ? 0.85 : 1, true, "Movement", "Quicker approach steps with bent elbows and higher foot lifts; stays in place.", phase => {
     const step = Math.sin(tau * phase);
-    rotate(b.chest, -3, 3 * step, 1.2 * step);
-    arms(-19 * step, 19 * step, 65, 65, 3);
-    rotate(b.neck, 2, -1.5 * step);
-    gait(phase, profile.stride * 1.35, 0.055, 0.58);
+    rotate(b.chest, -2, 2.5 * step, 0.8 * step);
+    arms(-16 * step, 16 * step, 60, 60, 2);
+    rotate(b.neck, 1.5, -1 * step);
+    gait(phase, profile.stride * 1.35, 0.05, 0.58);
   });
   clip("Headpat", 3.4, false, "Affection", profile.exuberant
-    ? "Ducks for a headpat, does three exaggerated pleased head bobs, then stands tall again."
-    : "Politely ducks for a headpat and leans into it with a comically content head tilt.", phase => {
-    const amount = envelope(phase, 0.2, 0.25);
-    const bob = 1 - Math.cos(tau * phase * 3);
+    ? "Ducks for a headpat and does three comically pleased head bobs."
+    : "Politely ducks and leans into a headpat with a contented head tilt.", phase => {
+    const amount = envelope(phase, 0.24, 0.28), bob = 1 - Math.cos(tau * phase * 3);
     lower(profile.duck * amount);
-    rotate(b.waist, -4 * amount);
-    rotate(b.neck, (-9 - 3 * bob) * amount, 0, 7 * amount);
-    rotate(b.head, -3 * bob * amount);
-    arms(3 * amount, 3 * amount, 20 * amount, 20 * amount, -3 * amount);
+    rotate(b.waist, -3 * amount);
+    rotate(b.neck, (-8 - 2 * bob) * amount, 0, 6 * amount);
+    rotate(b.head, -2 * bob * amount);
+    arms(2 * amount, 2 * amount, 12 * amount, 12 * amount);
     if (amount > 0) plant();
   });
-  clip("Petting", 2.8, true, "Affection", "A deliberately silly head-scratch reaction: relaxed shoulders, a tilted head, and a contented sway.", phase => {
+  clip("Petting", 2.8, true, "Affection", "A silly head-scratch reaction with relaxed arms, a tilted head, and a contented sway.", phase => {
     const sway = Math.sin(tau * phase);
-    rotate(b.chest, -2, 1.5 * sway * energy, 1.8 * sway * energy);
-    rotate(b.neck, -8 + 2 * sway, 0, 9 + 2 * sway);
-    rotate(b.head, -2 * (1 - Math.cos(tau * phase * 2)) * energy);
-    arms(4, 4, 28, 28, -4);
-    nodes[b.chest].scale.y *= 1 + 0.003 * (1 - Math.cos(tau * phase));
+    rotate(b.chest, -1.5, sway * energy, 1.2 * sway * energy);
+    rotate(b.neck, -7 + 1.5 * sway, 0, 8 + 1.5 * sway);
+    rotate(b.head, -1.5 * (1 - Math.cos(tau * phase * 2)) * energy);
+    arms(2, 2, 12, 12);
+    nodes[b.chest].scale.y *= 1 + 0.002 * (1 - Math.cos(tau * phase));
   });
-  clip("Curious", 3.2, false, "Attention", "Looks toward a hand and tips his head as if listening, then returns to neutral.", phase => {
-    const amount = envelope(phase, 0.25, 0.28);
-    rotate(b.chest, 0, 4 * amount);
-    rotate(b.neck, -3 * amount, 15 * amount, 8 * amount);
-    rotate(b.head, 0, 5 * amount);
-    arms(0, 0, 6 * amount, 9 * amount);
+  clip("Curious", 3.2, false, "Attention", "Looks toward a hand and tips his head as if listening.", phase => {
+    const amount = envelope(phase, 0.28, 0.3);
+    rotate(b.chest, 0, 3 * amount);
+    rotate(b.neck, -2 * amount, 13 * amount, 7 * amount);
+    rotate(b.head, 0, 4 * amount);
   });
-  clip("Nod", 2.2, false, "Attention", "Two gentle acknowledgement nods with a slight chest follow-through.", phase => {
-    const amount = envelope(phase);
-    const nod = (1 - Math.cos(tau * phase * 2)) * amount;
-    rotate(b.neck, -7 * nod);
-    rotate(b.head, -2 * nod);
-    rotate(b.chest, -1.2 * nod);
+  clip("Nod", 2.2, false, "Attention", "Two gentle acknowledgement nods.", phase => {
+    const nod = (1 - Math.cos(tau * phase * 2)) * envelope(phase);
+    rotate(b.neck, -6 * nod); rotate(b.head, -1.5 * nod);
   });
-  clip("High five", 3, false, "Greeting", "Offers a raised palm in front of his shoulder, holds it briefly, then lowers his arm.", phase => {
-    const amount = envelope(phase, 0.23, 0.25);
-    rotate(b.armR, 70 * amount, 0, -12 * amount);
-    rotate(b.elbowR, 95 * amount);
-    rotate(b.handR, -8 * amount, 18 * amount);
-    rotate(b.chest, 0, -4 * amount);
-    rotate(b.neck, 0, 4 * amount);
-  });
-  clip("Beckon", 3, false, "Greeting", "Bends a raised forearm toward himself twice in a friendly come-here gesture.", phase => {
-    const amount = envelope(phase, 0.2, 0.24);
-    const curl = Math.sin(tau * 2 * smooth((phase - 0.2) / 0.55));
-    rotate(b.armR, 25 * amount, 0, -8 * amount);
-    rotate(b.elbowR, (80 + 20 * curl) * amount);
-    rotate(b.handR, 9 * curl * amount);
-    rotate(b.neck, -3 * amount, -5 * amount);
-  });
+  clip("High five", 3, false, "Greeting", "Offers his right palm and holds it briefly; the body stays still.", phase => {
+    const amount = envelope(phase, 0.27, 0.3);
+    arm("R", { pitch: 35 * amount, spread: 8 * amount, bend: 100 * amount,
+      wristPitch: -8 * amount, wristYaw: 15 * amount });
+  }, true);
+  clip("Beckon", 3, false, "Greeting", "Curls his raised right forearm toward himself twice; the body stays still.", phase => {
+    const amount = envelope(phase, 0.24, 0.28);
+    const curl = Math.sin(tau * 2 * smooth((phase - 0.24) / 0.48));
+    arm("R", { pitch: 20 * amount, spread: 8 * amount, bend: (85 + 20 * curl) * amount,
+      wristPitch: 9 * curl * amount });
+  }, true);
   clip("Celebrate", 3.2, false, "Reaction", profile.exuberant
-    ? "An energetic two-arm cheer with a small knee bounce and a proud head lift."
-    : "A restrained victory gesture with a raised fist, small bounce, and appreciative nod.", phase => {
-    const amount = envelope(phase, 0.18, 0.28);
-    const bounce = 0.5 * (1 - Math.cos(tau * phase * 3));
-    lower(0.022 * bounce * amount * energy);
-    if (profile.exuberant) arms(60 * amount, 60 * amount, 70 * amount, 70 * amount, 42 * amount);
-    else arms(8 * amount, 45 * amount, 20 * amount, 85 * amount, 9 * amount);
-    rotate(b.neck, 6 * amount - 3 * bounce * amount, 0, 2 * amount);
+    ? "An energetic two-arm cheer and small knee bounce."
+    : "A restrained raised-hand victory gesture, small bounce, and appreciative nod.", phase => {
+    const amount = envelope(phase, 0.22, 0.3), bounce = 0.5 * (1 - Math.cos(tau * phase * 3));
+    lower(0.018 * bounce * amount * energy);
+    if (profile.exuberant) arms(60 * amount, 60 * amount, 55 * amount, 55 * amount, 30 * amount);
+    else arms(5 * amount, 40 * amount, 10 * amount, 80 * amount, 8 * amount);
+    rotate(b.neck, 5 * amount - 2 * bounce * amount, 0, amount);
     if (amount > 0) plant();
   });
-  clip("Shrug", 2.8, false, "Reaction", "Raises his shoulders and opens his hands in a playful what-was-that reaction.", phase => {
-    const amount = envelope(phase, 0.25, 0.28);
-    arms(8 * amount, 8 * amount, 55 * amount, 55 * amount, 14 * amount);
-    rotate(b.handL, 0, -55 * amount); rotate(b.handR, 0, 55 * amount);
-    rotate(b.neck, -2 * amount, 0, -5 * amount);
-    for (const name of ["L_Clavicle", "R_Clavicle"]) {
-      const index = rig.gltf.nodes.findIndex(node => node.name === name);
-      if (index >= 0) rotate(index, 0, 0, (name.startsWith("L") ? 5 : -5) * amount);
-    }
-  });
-  clip("Startled", 1.8, false, "Reaction", "A quick recoil with raised hands and bent knees, followed by a slower relaxed recovery.", phase => {
-    const amount = envelope(phase, 0.08, 0.6);
-    lower(0.025 * amount);
-    rotate(b.waist, 5 * amount);
-    rotate(b.neck, 6 * amount);
-    arms(18 * amount, 18 * amount, 65 * amount, 65 * amount, 18 * amount);
+  clip("Shrug", 2.8, false, "Reaction", "A playful two-arm shrug with upturned hands.", phase => {
+    const amount = envelope(phase, 0.28, 0.3);
+    arm("L", { pitch: 5 * amount, spread: 12 * amount, twist: -35 * amount, bend: 65 * amount, wristYaw: -25 * amount });
+    arm("R", { pitch: 5 * amount, spread: 12 * amount, twist: 35 * amount, bend: 65 * amount, wristYaw: 25 * amount });
+  }, true);
+  clip("Startled", 1.8, false, "Reaction", "Quickly recoils with raised hands and bent knees, then relaxes.", phase => {
+    const amount = envelope(phase, 0.08, 0.62);
+    lower(0.022 * amount); rotate(b.waist, 3 * amount); rotate(b.neck, 5 * amount);
+    arms(15 * amount, 15 * amount, 65 * amount, 65 * amount, 12 * amount);
     if (amount > 0) plant();
   });
-  clip("Drowsy", 5.6, true, "Rest", "Slow breathing and a gently bowed, bobbing head with relaxed arms.", phase => {
+  clip("Drowsy", 5.6, true, "Rest", "Slow breathing and a gently bowed, bobbing head.", phase => {
     const breath = 1 - Math.cos(tau * phase);
-    rotate(b.chest, -1.5);
-    rotate(b.neck, -9 - 1.5 * breath, 0, 3);
-    rotate(b.head, -2 * breath);
-    arms(0, 0, 4, 4, 1);
-    nodes[b.chest].scale.y *= 1 + 0.0025 * breath;
+    rotate(b.chest, -1); rotate(b.neck, -8 - breath, 0, 2); rotate(b.head, -1.5 * breath);
+    arms(0, 0, 3, 3); nodes[b.chest].scale.y *= 1 + 0.0015 * breath;
   });
   const maxFootError = rig.maxFootError();
   assert.ok(maxFootError < 0.002, `${profile.name}: foot placement error ${maxFootError}`);
-  return { ...rig.write(), character: profile.name, maxFootError, rigRepair: rig.gltf.extras.humanoidRigRepair ?? null,
-    skinRepair: rig.gltf.extras.humanoidSkinRepair ?? null };
+  return { ...rig.write(), character: profile.name, maxFootError, rig: rig.gltf.extras.humanoidRig };
 });
 fs.writeFileSync(new URL("human-animation-check.json", import.meta.url), JSON.stringify(report, null, 2) + "\n");
-for (const character of report) console.log(`${character.character}: ${character.clips.map(clip => clip.name).join(", ")} (max foot error ${character.maxFootError.toFixed(6)})`);
+for (const character of report) console.log(`${character.character}: ${character.joints} joints, ${character.clips.length} clips (foot error ${character.maxFootError.toFixed(6)})`);
