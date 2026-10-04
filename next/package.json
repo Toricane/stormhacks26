@@ -6,6 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "animate:creatures": "node work/animate-creatures.mjs",
+    "animate:humans": "node work/animate-humans.mjs",
+    "test:animations": "node --test work/check-creature-animations.test.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

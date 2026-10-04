@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { modelUrl, outputFiles, type Artifact } from "@/lib/artifacts";
 import { validateGlb } from "@/lib/glb";
+import { RIG_TYPES, type RigType } from "@/lib/rig-types";
 
 const Viewer = dynamic(() => import("@/components/viewer"), { ssr: false });
 type Result = Record<string, unknown>;
@@ -18,12 +19,16 @@ async function json<T>(url: string, init?: RequestInit): Promise<T> {
 
 export default function Page() {
   const [image, setImage] = useState<File | null>(null);
+  const [rigType, setRigType] = useState<RigType | "none">("quadruped");
   const [preview, setPreview] = useState("");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [artifacts, setArtifacts] = useState<Artifact[]>([
     { name: "Animated dog.glb", url: "/dog-animated.glb", kind: "model" },
+    { name: "Animated Pikachu.glb", url: "/Pikachu.glb", kind: "model" },
+    { name: "Animated LeBron James.glb", url: "/lebron_james.glb", kind: "model" },
+    { name: "Animated Keanu Reeves.glb", url: "/keanu_reeves.glb", kind: "model" },
   ]);
   const [selected, setSelected] = useState("/dog-animated.glb");
   const [uploadError, setUploadError] = useState("");
@@ -119,10 +124,15 @@ export default function Page() {
       const meshUrl = modelUrl(trellis);
       if (!meshUrl) throw new Error(`Trellis returned no GLB file. Response fields: ${Object.keys(trellis).join(", ")}. See Trellis.json below.`);
 
+      if (rigType === "none") {
+        setStatus("Done. Rigging skipped. Select the generated model below to inspect it.");
+        return;
+      }
+
       async function startTripo(action: "check" | "rig") {
         return json<{ taskId: string }>("/api/pipeline", {
           method: "POST", headers: { "Content-Type": "application/json" }, signal,
-          body: JSON.stringify({ action, modelUrl: meshUrl }),
+          body: JSON.stringify({ action, modelUrl: meshUrl, rigType }),
         });
       }
       setStatus("Starting Tripo rig check…");
@@ -132,11 +142,10 @@ export default function Page() {
       const output = checked.output as Result | undefined;
       setCheck(output || checked);
       if (output?.riggable !== true) throw new Error("Tripo reports that this model cannot be rigged. The Trellis model is available below.");
-      if (output.rig_type !== "quadruped") throw new Error(`Tripo detected ${String(output.rig_type)} instead of quadruped. Try an image with four clearly visible legs.`);
 
-      setStatus("Starting quadruped auto rig…");
+      setStatus(`Starting ${rigType} auto rig…`);
       const rigging = await startTripo("rig");
-      const rigged = await poll("tripo", rigging.taskId, "Auto rigging quadruped", signal);
+      const rigged = await poll("tripo", rigging.taskId, `Auto rigging ${rigType}`, signal);
       await keepOutputs("Auto rig", rigged, signal);
       if (!modelUrl(rigged)) throw new Error("Tripo returned no rigged GLB. Check the Auto rig report below.");
       setStatus("Done. Select a model below to inspect it.");
@@ -155,13 +164,17 @@ export default function Page() {
     <main>
       <h1>GLB viewer</h1>
       <h2>Generate a model</h2>
-      <p>Upload a picture of a four-legged animal. Trellis creates a GLB; Tripo checks and rigs it.</p>
+      <p>Upload a character or creature image. Choose a rig type, or select No rigging to keep the generated GLB.</p>
       <div className="row">
         <label>Image <input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={event => setImage(event.target.files?.[0] || null)} /></label>
-        <button onClick={run} disabled={!image || busy}>{busy ? "Processing…" : "Generate & rig"}</button>
+        <label>Rig type <select value={rigType} disabled={busy} onChange={event => setRigType(event.target.value as RigType | "none")}>
+          <option value="none">No rigging</option>
+          {RIG_TYPES.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
+        </select></label>
+        <button onClick={run} disabled={!image || busy}>{busy ? "Processing…" : rigType === "none" ? "Generate" : "Generate & rig"}</button>
       </div>
       <p className="muted">PNG, JPG, WebP · max 10 MB</p>
-      {preview && <img className="preview" src={preview} alt="Input quadruped" />}
+      {preview && <img className="preview" src={preview} alt="Input character or creature" />}
       <p role="status">{status}</p>
       {error && <p className="error" role="alert">{error}</p>}
       {check && <details open><summary>Rig check result</summary><pre>{JSON.stringify(check, null, 2)}</pre></details>}
