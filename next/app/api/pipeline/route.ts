@@ -1,16 +1,19 @@
 import { fal } from "@fal-ai/client";
 import { ApiError, assetUrl, failure } from "@/lib/server";
+import { isRigType } from "@/lib/rig-types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 const trellis = "tripo3d/h3.1/image-to-3d";
 const tripoBase = "https://openapi.tripo3d.ai/v3";
 
-function requireKeys() {
-  if (!process.env.FAL_KEY || !process.env.TRIPO_API_KEY) {
-    throw new ApiError("Add FAL_KEY and TRIPO_API_KEY to .env, then restart the server.");
+function requireKeys(provider: "fal" | "tripo") {
+  if (provider === "fal") {
+    if (!process.env.FAL_KEY) throw new ApiError("Add FAL_KEY to .env, then restart the server.");
+    fal.config({ credentials: process.env.FAL_KEY });
+  } else if (!process.env.TRIPO_API_KEY) {
+    throw new ApiError("Add TRIPO_API_KEY to .env, then restart the server.");
   }
-  fal.config({ credentials: process.env.FAL_KEY });
 }
 
 async function tripo(path: string, body?: Record<string, unknown>) {
@@ -34,8 +37,8 @@ async function tripo(path: string, body?: Record<string, unknown>) {
 
 export async function POST(request: Request) {
   try {
-    requireKeys();
     if (request.headers.get("content-type")?.includes("multipart/form-data")) {
+      requireKeys("fal");
       const image = (await request.formData()).get("image");
       if (!(image instanceof File) || !["image/png", "image/jpeg", "image/webp"].includes(image.type)) {
         throw new ApiError("Choose a PNG, JPG, or WebP image.");
@@ -45,14 +48,16 @@ export async function POST(request: Request) {
       const task = await fal.queue.submit(trellis, { input: { image_url: imageUrl } });
       return Response.json({ taskId: task.request_id });
     }
-    const { action, modelUrl } = await request.json();
+    const { action, modelUrl, rigType = "quadruped" } = await request.json();
     const input = assetUrl(modelUrl).href;
     if (action !== "check" && action !== "rig") throw new ApiError("Unknown action.");
+    if (action === "rig" && !isRigType(rigType)) throw new ApiError("Choose a supported Tripo rig type.");
+    requireKeys("tripo");
     const task = await tripo(`/animations/${action === "check" ? "rig-check" : "rig"}`, {
       input,
       ...(action === "rig" ? {
-        model: "v2.5-20260210",
-        rig_type: "quadruped",
+        model: rigType === "biped" ? "v1.0-20240301" : "v2.5-20260210",
+        rig_type: rigType,
         spec: "tripo",
         out_format: "glb",
       } : {}),
@@ -64,17 +69,18 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    requireKeys();
     const params = new URL(request.url).searchParams;
     const taskId = params.get("taskId");
     if (!taskId || !/^[\w-]{1,160}$/.test(taskId)) throw new ApiError("Invalid task ID.");
     if (params.get("provider") === "fal") {
+      requireKeys("fal");
       const task = await fal.queue.status(trellis, { requestId: taskId });
       if (task.status !== "COMPLETED") return Response.json({ status: "running" });
       const result = await fal.queue.result(trellis, { requestId: taskId });
       return Response.json({ status: "success", result: result.data });
     }
     if (params.get("provider") !== "tripo") throw new ApiError("Unknown provider.");
+    requireKeys("tripo");
     const task = await tripo(`/tasks/${encodeURIComponent(taskId)}`);
     return Response.json({
       status: task.status,

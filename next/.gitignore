@@ -3,3 +3,7 @@ node_modules/
 .env*
 !.env.example
 *.tsbuildinfo
+public/*
+!public/Pikachu.glb
+!public/lebron_james.glb
+!public/keanu_reeves.glb

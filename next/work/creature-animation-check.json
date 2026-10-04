@@ -1,0 +1,218 @@
+[
+  {
+    "file": "/Users/mba/Desktop/coding/stormhacks26/next/public/Pikachu.glb",
+    "joints": 16,
+    "clips": [
+      {
+        "name": "Idle",
+        "loop": true,
+        "duration": 4,
+        "fps": 30,
+        "description": "Gentle breathing, a small head sway and ear flick."
+      },
+      {
+        "name": "Headpat",
+        "loop": false,
+        "duration": 3.2,
+        "fps": 30,
+        "description": "Three soft head dips, a pleased tilt and relaxed ears, returning to rest."
+      },
+      {
+        "name": "Happy",
+        "loop": true,
+        "duration": 2.8,
+        "fps": 30,
+        "description": "Raised paws, perked ears and two small cheerful hops, returning to rest."
+      },
+      {
+        "name": "Wave",
+        "generator": "creature-animations-v1",
+        "loop": false,
+        "in_place": true,
+        "duration": 2.8,
+        "fps": 30,
+        "category": "Greeting",
+        "description": "Raises one paw, waves three times, then lowers it with an ear perk."
+      },
+      {
+        "name": "Walk",
+        "generator": "creature-animations-v1",
+        "loop": true,
+        "in_place": true,
+        "duration": 1.2,
+        "fps": 30,
+        "category": "Movement",
+        "description": "Alternating little steps and opposite paw swings; stays in place for future steering."
+      },
+      {
+        "name": "Curious",
+        "generator": "creature-animations-v1",
+        "loop": false,
+        "in_place": true,
+        "duration": 3.6,
+        "fps": 30,
+        "category": "Attention",
+        "description": "Pauses to listen, tilts its head, and perks one ear before returning to rest."
+      },
+      {
+        "name": "Petting",
+        "generator": "creature-animations-v1",
+        "loop": true,
+        "in_place": true,
+        "duration": 3,
+        "fps": 30,
+        "category": "Affection",
+        "description": "Leans into a pet, relaxes its ears, and gently sways with its paws tucked in."
+      },
+      {
+        "name": "Nuzzle",
+        "generator": "creature-animations-v1",
+        "loop": false,
+        "in_place": true,
+        "duration": 2.6,
+        "fps": 30,
+        "category": "Affection",
+        "description": "Reaches both paws forward and leans its cheek toward a hand, then settles back."
+      },
+      {
+        "name": "Startled",
+        "generator": "creature-animations-v1",
+        "loop": false,
+        "in_place": true,
+        "duration": 1.6,
+        "fps": 30,
+        "category": "Reaction",
+        "description": "A quick flinch with raised paws and perked ears, followed by a slower recovery."
+      },
+      {
+        "name": "Drowsy",
+        "generator": "creature-animations-v1",
+        "loop": true,
+        "in_place": true,
+        "duration": 5,
+        "fps": 30,
+        "category": "Rest",
+        "description": "Sleepy breathing, a bowed head, drooped ear tips, and a slow head bob."
+      }
+    ],
+    "preservedSourceBinary": true
+  },
+  {
+    "file": "/Users/mba/Desktop/coding/stormhacks26/next/public/dog-animated.glb",
+    "joints": 21,
+    "clips": [
+      {
+        "name": "Idle",
+        "loop": true,
+        "in_place": true,
+        "category": "Rest",
+        "description": "Soft head movement while waiting."
+      },
+      {
+        "name": "Tail wag",
+        "loop": true,
+        "in_place": true,
+        "category": "Rest",
+        "description": "A relaxed standing tail wag."
+      },
+      {
+        "name": "Walk",
+        "loop": true,
+        "in_place": true,
+        "category": "Movement",
+        "description": "A slow four-beat walk in place."
+      },
+      {
+        "name": "Trot",
+        "generator": "creature-animations-v1",
+        "loop": true,
+        "in_place": true,
+        "duration": 0.9,
+        "fps": 30,
+        "category": "Movement",
+        "description": "A brisk diagonal gait with a lively tail; stays in place for future approach movement."
+      },
+      {
+        "name": "Headpat",
+        "generator": "creature-animations-v1",
+        "loop": false,
+        "in_place": true,
+        "duration": 3.2,
+        "fps": 30,
+        "category": "Affection",
+        "description": "Three soft head dips and a pleased tilt with a tail wag, returning to rest."
+      },
+      {
+        "name": "Scratch",
+        "generator": "creature-animations-v1",
+        "loop": true,
+        "in_place": true,
+        "duration": 2,
+        "fps": 30,
+        "category": "Affection",
+        "description": "Leans into a scratch with a tipped head and an eager tail wag."
+      },
+      {
+        "name": "Happy",
+        "generator": "creature-animations-v1",
+        "loop": true,
+        "in_place": true,
+        "duration": 1.6,
+        "fps": 30,
+        "category": "Reaction",
+        "description": "An excited whole-body wiggle with a lifted head and a fast wag."
+      },
+      {
+        "name": "Curious",
+        "generator": "creature-animations-v1",
+        "loop": false,
+        "in_place": true,
+        "duration": 3.4,
+        "fps": 30,
+        "category": "Attention",
+        "description": "Looks to one side and tilts its head as if listening, then straightens up."
+      },
+      {
+        "name": "Play bow",
+        "generator": "creature-animations-v1",
+        "loop": false,
+        "in_place": true,
+        "duration": 3,
+        "fps": 30,
+        "category": "Greeting",
+        "description": "Lowers its chest with its hindquarters raised and tail wagging, inviting play."
+      },
+      {
+        "name": "Sniff",
+        "generator": "creature-animations-v1",
+        "loop": true,
+        "in_place": true,
+        "duration": 4,
+        "fps": 30,
+        "category": "Attention",
+        "description": "Lowers its nose and makes small searching movements near the ground."
+      },
+      {
+        "name": "Shake",
+        "generator": "creature-animations-v1",
+        "loop": false,
+        "in_place": true,
+        "duration": 2.2,
+        "fps": 30,
+        "category": "Reaction",
+        "description": "Shakes its head and shoulders in a quick ripple, then settles its tail."
+      },
+      {
+        "name": "Offer paw",
+        "generator": "creature-animations-v1",
+        "loop": false,
+        "in_place": true,
+        "duration": 3,
+        "fps": 30,
+        "category": "Greeting",
+        "description": "Lifts one front paw to offer a friendly shake, then places it back on the floor."
+      }
+    ],
+    "preservedSourceBinary": true
+  }
+]

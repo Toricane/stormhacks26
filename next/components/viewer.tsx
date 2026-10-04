@@ -6,6 +6,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 import { EYE_HEIGHT, moveFirstPerson } from "@/lib/first-person";
+import { CreatureAnimationPlayer, describeAnimation, type CreatureAnimation } from "@/lib/creature-animation-player";
 
 type Rig = { bones: THREE.Bone[]; rest: THREE.Quaternion[]; helper: THREE.SkeletonHelper };
 type View = "model" | "animation" | "firstPerson";
@@ -40,8 +41,7 @@ export default function Viewer({ url }: { url: string }) {
   const container = useRef<HTMLDivElement>(null);
   const model = useRef<THREE.Object3D | null>(null);
   const rig = useRef<Rig | null>(null);
-  const mixer = useRef<THREE.AnimationMixer | null>(null);
-  const clips = useRef<THREE.AnimationClip[]>([]);
+  const player = useRef<CreatureAnimationPlayer | null>(null);
   const viewScene = useRef<ViewScene | null>(null);
   const keys = useRef(new Set<string>());
   const viewRef = useRef<View>("model");
@@ -49,7 +49,7 @@ export default function Viewer({ url }: { url: string }) {
   const [loaded, setLoaded] = useState(false);
   const [locked, setLocked] = useState(false);
   const [navigationError, setNavigationError] = useState("");
-  const [animationNames, setAnimationNames] = useState<string[]>([]);
+  const [animations, setAnimations] = useState<CreatureAnimation[]>([]);
   const [animation, setAnimation] = useState("");
   const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
@@ -90,7 +90,8 @@ export default function Viewer({ url }: { url: string }) {
         setNavigationError("This browser does not support mouse capture.");
         return;
       }
-      Promise.resolve(renderer.domElement.requestPointerLock()).catch(onLockError);
+      try { Promise.resolve(renderer.domElement.requestPointerLock()).catch(onLockError); }
+      catch { onLockError(); }
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (viewRef.current !== "firstPerson" || !firstPerson.isLocked) return;
@@ -146,9 +147,8 @@ export default function Viewer({ url }: { url: string }) {
         material.depthTest = false; helper.renderOrder = 10;
         scene.add(helper);
         rig.current = { bones, rest: bones.map(bone => bone.quaternion.clone()), helper };
-        clips.current = gltf.animations;
-        mixer.current = new THREE.AnimationMixer(root);
-        setAnimationNames(gltf.animations.map(clip => clip.name));
+        player.current = new CreatureAnimationPlayer(root, gltf.animations);
+        setAnimations(gltf.animations.map(describeAnimation));
         setAnimation(gltf.animations[0]?.name || "");
         setBoneNames(bones.map((bone, index) => bone.name || `Bone ${index + 1}`));
         setMessage(bones.length ? `${bones.length} bones. Rotate a joint to inspect skin deformation.` : "Static mesh. Select the Auto rig model to check deformation.");
@@ -163,7 +163,7 @@ export default function Viewer({ url }: { url: string }) {
     const animate = (time: number) => {
       frame = requestAnimationFrame(animate);
       const delta = Math.min((time - previousTime) / 1000, 0.05);
-      mixer.current?.update(delta);
+      player.current?.update(delta);
       previousTime = time;
       if (viewRef.current === "firstPerson") {
         if (firstPerson.isLocked) moveFirstPerson(firstPerson, keys.current, delta);
@@ -185,9 +185,7 @@ export default function Viewer({ url }: { url: string }) {
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
       observer.disconnect(); controls.dispose(); dispose(scene); renderer.dispose();
-      mixer.current?.stopAllAction();
-      if (model.current) mixer.current?.uncacheRoot(model.current);
-      mixer.current = null; clips.current = [];
+      player.current?.dispose(); player.current = null;
       viewScene.current = null;
       renderer.domElement.remove(); model.current = null; rig.current = null;
     };
@@ -224,14 +222,13 @@ export default function Viewer({ url }: { url: string }) {
   }, [view, loaded]);
 
   useEffect(() => {
-    mixer.current?.stopAllAction();
-    const clip = clips.current.find(clip => clip.name === animation);
-    if (clip) mixer.current?.clipAction(clip).reset().play();
-  }, [animation, animationNames]);
+    if (animation) player.current?.play(animation);
+    else player.current?.stop();
+  }, [animation, animations]);
 
   useEffect(() => {
-    if (mixer.current) mixer.current.timeScale = playing ? speed : 0;
-  }, [playing, speed, animationNames]);
+    player.current?.setPlayback(playing, speed);
+  }, [playing, speed, animations]);
 
   useEffect(() => { if (rig.current) rig.current.helper.visible = skeleton && view !== "firstPerson"; }, [skeleton, boneNames, view]);
   useEffect(() => {
@@ -261,8 +258,10 @@ export default function Viewer({ url }: { url: string }) {
   function changeView(next: View) {
     setView(next);
     if (next === "model") setAnimation("");
-    else if (next === "animation" && !animation) setAnimation(animationNames[0] || "");
+    else if (next === "animation" && !animation) setAnimation(animations[0]?.name || "");
   }
+
+  const selectedAnimation = animations.find(clip => clip.name === animation);
 
   return <>
     <p className="muted">{view === "firstPerson"
@@ -271,16 +270,21 @@ export default function Viewer({ url }: { url: string }) {
     <div className="viewer" ref={container} aria-label="Interactive 3D model viewer" />
     <p role="status">{message}</p>
     {navigationError && <p className="error" role="alert">{navigationError}</p>}
-    {animationNames.length > 0 && view !== "model" && <div className="row">
+    {animations.length > 0 && view !== "model" && <div className="row">
       <label>Animation <select value={animation} onChange={event => setAnimation(event.target.value)}>
         <option value="">Rest pose</option>
-        {animationNames.map(name => <option key={name} value={name}>{name}</option>)}
+        {animations.map(clip => <option key={clip.name} value={clip.name}>{clip.name}</option>)}
       </select></label>
       <button disabled={!animation} onClick={() => setPlaying(!playing)}>{playing ? "Pause" : "Play"}</button>
+      <button disabled={!animation} onClick={() => { player.current?.play(animation, 0); setPlaying(true); }}>Replay</button>
       <label>Speed <select value={speed} onChange={event => setSpeed(Number(event.target.value))}>
         <option value={0.5}>0.5×</option><option value={1}>1×</option><option value={2}>2×</option>
       </select></label>
     </div>}
+    {selectedAnimation && view !== "model" && <p className="muted">
+      {selectedAnimation.loop ? "Loops" : "Plays once"} · {selectedAnimation.duration.toFixed(1)}s
+      {selectedAnimation.description && ` · ${selectedAnimation.description}`}
+    </p>}
     {view !== "firstPerson" && <div className="row">
       <label><input type="checkbox" checked={wireframe} onChange={event => setWireframe(event.target.checked)} /> Wireframe</label>
       <label><input type="checkbox" checked={skeleton} onChange={event => setSkeleton(event.target.checked)} /> Skeleton</label>
@@ -302,7 +306,7 @@ export default function Viewer({ url }: { url: string }) {
     {loaded && <div className="row" aria-label="View options">
       <span>View</span>
       <button aria-pressed={view === "model"} onClick={() => changeView("model")}>Model</button>
-      <button aria-pressed={view === "animation"} disabled={!animationNames.length} onClick={() => changeView("animation")}>Animation</button>
+      <button aria-pressed={view === "animation"} disabled={!animations.length} onClick={() => changeView("animation")}>Animation</button>
       <button aria-pressed={view === "firstPerson"} onClick={() => changeView("firstPerson")}>First person</button>
     </div>}
   </>;
