@@ -50,8 +50,8 @@ Turns per-frame detections into stable tracked hands ("slots").
 - **Smoothing:** a One Euro filter on each landmark's x and y (min cutoff 1.6 Hz, beta 6). This gives heavy smoothing when the hand is still and low lag when it moves fast.
 - **Pose debounce:** a new pose must be seen for 2 consecutive detections before it's adopted.
 - **Velocity and growth:** computed over a 110 ms window from **unsmoothed** palm positions and log-scale, so filter lag doesn't damp throws. `velocity` is px/s. `growth` is d(ln scale)/dt, which is positive when the hand moves toward the webcam.
-- **Robust scale (`videoPxPerMeter`):** for 8 rigid palm bones, divide on-screen length (video px) by the metric length from the world landmarks. Tilt only shortens bones on screen, so the mean of the two largest ratios is used. That makes it robust to palm rotation and independent of the user's hand size.
-- **Depth calibration:** the median log-scale of the first 20 detections is the rest scale, shared by both hands. `C` (`recalibrate()`) re-collects it. With a pinhole camera model: `distance = REST_CAMERA_DISTANCE × scale_rest / scale_now` and `reach = REST_CAMERA_DISTANCE − distance`, clamped to −0.2…0.45 m. Scale gets its own One Euro filter (on the log, 1.0 Hz / 1.5). `REST_CAMERA_DISTANCE` (0.5 m) is an assumption, but an error in it only scales reach linearly, which the gain absorbs.
+- **Robust scale (`videoPxPerMeter`):** fits the 8 rigid palm bones in the camera-facing XY plane between image and world landmarks. Because both measurements foreshorten together, side/back views no longer collapse the apparent size. Per-frame log-scale changes are capped before a low-beta One Euro filter rejects landmark outliers without making normal reaching sluggish.
+- **Depth calibration:** the median log-scale of the first 20 detections is the rest scale, shared by both hands. `C` (`recalibrate()`) re-collects it. With a pinhole camera model: `distance = REST_CAMERA_DISTANCE × scale_rest / scale_now` and `reach = REST_CAMERA_DISTANCE − distance`, clamped to −0.2…0.45 m. Scale gets its own One Euro filter (on the log, 1.4 Hz / 0.25 beta). `REST_CAMERA_DISTANCE` (0.5 m) is an assumption, but an error in it only scales reach linearly, which the gain absorbs.
 
 ### `pose.ts`
 
@@ -66,7 +66,7 @@ Classifies from **world landmarks**, so it's invariant to distance and in-plane 
 
 Outlined, cartoon-style silhouettes. All widths are proportional to on-screen hand size, so hands look right at any depth.
 
-- Draw order: forearm stub, palm polygon, fingers from pinky to index (outline pass then fill pass for each), then the thumb.
+- Draw order: a long forearm that widens toward the elbow and joins the palm across the full wrist, followed by fingers, rounded palm, and thumb. One outline pass followed by a solid fill merges overlapping pieces into a cohesive silhouette. A single batched contour stroke marks one inner edge per digit, with another batched stroke for joint creases, so fingers remain readable without per-frame gradients or outlined segments.
 - Pinch shows an amber ring at the pinch point. Petting shows a green ring around the palm. A pose label sits under the wrist.
 - The debug skeleton (`D`) shows the landmarks, the connections between them, and a palm velocity vector.
 

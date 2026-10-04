@@ -3,6 +3,9 @@ import type { Hand, Vec2 } from "./types";
 const SKIN = "#f2d2b0";
 const SKIN_CLOSED = "#e8bf96";
 const OUTLINE = "#3a281d";
+const CREASE = "rgba(91, 58, 38, 0.38)";
+const CONTOUR = "rgba(74, 46, 30, 0.56)";
+const FOREARM_LENGTH = 3.2;
 
 /** Drawn back to front: pinky first so the index finger overlaps it. */
 const FINGERS: { chain: number[]; width: number }[] = [
@@ -12,8 +15,8 @@ const FINGERS: { chain: number[]; width: number }[] = [
   { chain: [5, 6, 7, 8], width: 0.24 },
 ];
 const THUMB = { chain: [1, 2, 3, 4], width: 0.27 };
-const SEGMENT_TAPER = [1.05, 0.93, 0.84];
-const PALM = [0, 1, 5, 9, 13, 17];
+const DIGITS = [...FINGERS, THUMB];
+const PALM = [1, 5, 9, 13, 17];
 
 const CONNECTIONS: [number, number][] = [
   [0, 1], [1, 2], [2, 3], [3, 4],
@@ -23,63 +26,164 @@ const CONNECTIONS: [number, number][] = [
   [13, 17], [17, 18], [18, 19], [19, 20], [0, 17],
 ];
 
-function segment(ctx: CanvasRenderingContext2D, a: Vec2, b: Vec2, width: number): void {
-  ctx.lineWidth = width;
-  ctx.beginPath();
-  ctx.moveTo(a.x, a.y);
-  ctx.lineTo(b.x, b.y);
-  ctx.stroke();
-}
-
 function drawFinger(
   ctx: CanvasRenderingContext2D,
   pts: Vec2[],
   chain: number[],
   width: number,
-  outline: number,
-  fill: string,
+  extra: number,
+  color: string,
 ): void {
-  for (const [color, extra] of [[OUTLINE, outline * 2], [fill, 0]] as const) {
-    ctx.strokeStyle = color;
-    for (let i = 0; i < chain.length - 1; i++) {
-      segment(ctx, pts[chain[i]], pts[chain[i + 1]], width * SEGMENT_TAPER[i] + extra);
-    }
-  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width + extra;
+  ctx.beginPath();
+  ctx.moveTo(pts[chain[0]].x, pts[chain[0]].y);
+  for (let i = 1; i < chain.length; i++) ctx.lineTo(pts[chain[i]].x, pts[chain[i]].y);
+  ctx.stroke();
 }
 
-function drawPalm(ctx: CanvasRenderingContext2D, pts: Vec2[], u: number, outline: number, fill: string): void {
-  const wrist = pts[0];
-  const forearm = { x: wrist.x + (wrist.x - pts[9].x) * 0.6, y: wrist.y + (wrist.y - pts[9].y) * 0.6 };
-  const rounding = u * 0.3;
-
-  for (const [color, extra] of [[OUTLINE, outline * 2], [fill, 0]] as const) {
-    ctx.strokeStyle = color;
-    ctx.fillStyle = color;
-    segment(ctx, wrist, forearm, u * 0.62 + extra);
-    ctx.lineWidth = rounding + extra;
-    ctx.beginPath();
-    ctx.moveTo(pts[PALM[0]].x, pts[PALM[0]].y);
-    for (let i = 1; i < PALM.length; i++) ctx.lineTo(pts[PALM[i]].x, pts[PALM[i]].y);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+function handBasis(pts: Vec2[]): { dx: number; dy: number; nx: number; ny: number } {
+  let dx = pts[0].x - pts[9].x;
+  let dy = pts[0].y - pts[9].y;
+  const length = Math.hypot(dx, dy) || 1;
+  dx /= length;
+  dy /= length;
+  let nx = -dy;
+  let ny = dx;
+  if ((pts[1].x - pts[0].x) * nx + (pts[1].y - pts[0].y) * ny < 0) {
+    nx *= -1;
+    ny *= -1;
   }
+  return { dx, dy, nx, ny };
+}
+
+function drawForearm(
+  ctx: CanvasRenderingContext2D,
+  pts: Vec2[],
+  u: number,
+  extra: number,
+  color: string,
+): void {
+  const wrist = pts[0];
+  const { dx, dy, nx, ny } = handBasis(pts);
+  const end = { x: wrist.x + dx * u * FOREARM_LENGTH, y: wrist.y + dy * u * FOREARM_LENGTH };
+  const wristHalf = u * 0.34 + extra / 2;
+  const endHalf = u * 0.43 + extra / 2;
+
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(wrist.x + nx * wristHalf, wrist.y + ny * wristHalf);
+  ctx.lineTo(end.x + nx * endHalf, end.y + ny * endHalf);
+  ctx.quadraticCurveTo(end.x + dx * u * 0.18, end.y + dy * u * 0.18, end.x - nx * endHalf, end.y - ny * endHalf);
+  ctx.lineTo(wrist.x - nx * wristHalf, wrist.y - ny * wristHalf);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawPalm(
+  ctx: CanvasRenderingContext2D,
+  pts: Vec2[],
+  u: number,
+  extra: number,
+  color: string,
+): void {
+  const { nx, ny } = handBasis(pts);
+  const wristThumb = { x: pts[0].x + nx * u * 0.34, y: pts[0].y + ny * u * 0.34 };
+  const wristPinky = { x: pts[0].x - nx * u * 0.34, y: pts[0].y - ny * u * 0.34 };
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = u * 0.22 + extra;
+  ctx.beginPath();
+  ctx.moveTo(wristThumb.x, wristThumb.y);
+  for (const index of PALM) ctx.lineTo(pts[index].x, pts[index].y);
+  ctx.lineTo(wristPinky.x, wristPinky.y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+}
+
+/** One inner edge per digit: enough separation without outlining every bone. */
+function drawFingerContours(ctx: CanvasRenderingContext2D, pts: Vec2[], u: number): void {
+  ctx.strokeStyle = CONTOUR;
+  ctx.lineWidth = Math.max(1, u * 0.022);
+  ctx.beginPath();
+  for (const f of DIGITS) {
+    const base = pts[f.chain[0]];
+    const first = pts[f.chain[1]];
+    const second = pts[f.chain[2]];
+    const tip = pts[f.chain[3]];
+    const length = Math.hypot(tip.x - base.x, tip.y - base.y) || 1;
+    let nx = -(tip.y - base.y) / length;
+    let ny = (tip.x - base.x) / length;
+    const towardThumbX = pts[1].x - base.x;
+    const towardThumbY = pts[1].y - base.y;
+    if (nx * towardThumbX + ny * towardThumbY < 0) {
+      nx *= -1;
+      ny *= -1;
+    }
+    const offset = u * f.width * 0.34;
+    const startX = base.x + (first.x - base.x) * 0.28 + nx * offset;
+    const startY = base.y + (first.y - base.y) * 0.28 + ny * offset;
+    const middleX = first.x + (second.x - first.x) * 0.58 + nx * offset;
+    const middleY = first.y + (second.y - first.y) * 0.58 + ny * offset;
+    const endX = second.x + (tip.x - second.x) * 0.62 + nx * offset;
+    const endY = second.y + (tip.y - second.y) * 0.62 + ny * offset;
+    ctx.moveTo(startX, startY);
+    ctx.quadraticCurveTo(middleX, middleY, endX, endY);
+  }
+  ctx.stroke();
+}
+
+function drawAnatomy(ctx: CanvasRenderingContext2D, pts: Vec2[], u: number, extra: number, color: string): void {
+  drawForearm(ctx, pts, u, extra, color);
+  for (const f of FINGERS) drawFinger(ctx, pts, f.chain, u * f.width, extra, color);
+  drawPalm(ctx, pts, u, extra, color);
+  drawFinger(ctx, pts, THUMB.chain, u * THUMB.width, extra, color);
+}
+
+function drawCreases(ctx: CanvasRenderingContext2D, pts: Vec2[], u: number): void {
+  ctx.strokeStyle = CREASE;
+  ctx.lineWidth = Math.max(1, u * 0.018);
+  ctx.beginPath();
+  ctx.moveTo(pts[1].x, pts[1].y);
+  ctx.quadraticCurveTo(pts[2].x, pts[2].y, pts[3].x, pts[3].y);
+  const { dx, dy } = handBasis(pts);
+  ctx.moveTo(pts[5].x, pts[5].y);
+  ctx.quadraticCurveTo(pts[9].x + dx * u * 0.13, pts[9].y + dy * u * 0.13, pts[13].x, pts[13].y);
+  ctx.stroke();
+
+  ctx.globalAlpha *= 0.58;
+  ctx.beginPath();
+  for (const f of DIGITS) {
+    const a = pts[f.chain[1]];
+    const b = pts[f.chain[2]];
+    const length = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    const nx = -(b.y - a.y) / length;
+    const ny = (b.x - a.x) / length;
+    const half = u * f.width * 0.2;
+    ctx.moveTo(b.x + nx * half, b.y + ny * half);
+    ctx.lineTo(b.x - nx * half, b.y - ny * half);
+  }
+  ctx.stroke();
+  ctx.globalAlpha /= 0.58;
 }
 
 export function drawHand(ctx: CanvasRenderingContext2D, hand: Hand, petting: boolean): void {
   const pts = hand.points;
   const u = Math.max(hand.size, 20);
   const outline = Math.max(1.5, u * 0.04);
-  const fill = hand.closed ? SKIN_CLOSED : SKIN;
 
   ctx.save();
   ctx.globalAlpha = hand.presence;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
 
-  drawPalm(ctx, pts, u, outline, fill);
-  for (const f of FINGERS) drawFinger(ctx, pts, f.chain, u * f.width, outline, fill);
-  drawFinger(ctx, pts, THUMB.chain, u * THUMB.width, outline, fill);
+  // Drawing the whole outline first and the whole fill second makes overlapping
+  // segments read as one silhouette instead of a stack of outlined capsules.
+  drawAnatomy(ctx, pts, u, outline * 2, OUTLINE);
+  drawAnatomy(ctx, pts, u, 0, hand.closed ? SKIN_CLOSED : SKIN);
+  drawFingerContours(ctx, pts, u);
+  drawCreases(ctx, pts, u);
 
   if (hand.pose === "pinch") {
     ctx.strokeStyle = "rgba(255, 196, 92, 0.95)";

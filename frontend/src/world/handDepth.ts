@@ -34,7 +34,9 @@ export function placeHand(hand: Hand, world: World): PlacedHand {
     ...hand,
     points: hand.points.map(scale),
     pinchPoint: scale(hand.pinchPoint),
-    size: hand.size * k,
+    // Keep stroke widths anatomical even when the wrist-to-knuckle line is
+    // foreshortened by a side/back view.
+    size: world.focalPx() / distance * PALM_LENGTH,
     distance,
     palmWorld: world.rayPoint(c, distance),
     handLengthPx: hand.pxPerMeter * PALM_LENGTH,

@@ -20,6 +20,10 @@ const FILTER_MIN_CUTOFF = 1.6;
 const FILTER_BETA = 6;
 const WORLD_FILTER_MIN_CUTOFF = 1.8;
 const WORLD_FILTER_BETA = 12;
+const SCALE_FILTER_MIN_CUTOFF = 1.4;
+const SCALE_FILTER_BETA = 0.25;
+/** Reject single-frame depth jumps while still allowing a fast reach. */
+const MAX_LOG_SCALE_STEP = 0.12;
 
 /** Assumed webcam-to-hand distance at rest. Errors here only scale reach linearly. */
 const REST_CAMERA_DISTANCE = 0.5;
@@ -49,27 +53,21 @@ export function toScreen(p: Vec2, vp: Viewport): Vec2 {
   };
 }
 
-/**
- * Video px per meter at the hand. Tilting the hand only shortens bones on screen,
- * so the least-foreshortened bones (largest ratios) give the truest scale.
- */
+/** Video px per meter at the hand, fitted in the camera-facing plane. */
 function videoPxPerMeter(raw: RawHand, vp: Viewport): number {
   const vw = vp.videoWidth || 640;
   const vh = vp.videoHeight || 480;
-  const ratios: number[] = [];
+  let imageEnergy = 0;
+  let worldEnergy = 0;
   for (const [a, b] of PALM_BONES) {
-    const ia = raw.image[a];
-    const ib = raw.image[b];
-    const px = Math.hypot((ia.x - ib.x) * vw, (ia.y - ib.y) * vh);
-    const m = dist3(raw.world[a], raw.world[b]);
-    if (m > 1e-4) ratios.push(px / m);
+    const imageDx = (raw.image[a].x - raw.image[b].x) * vw;
+    const imageDy = (raw.image[a].y - raw.image[b].y) * vh;
+    const worldDx = raw.world[a].x - raw.world[b].x;
+    const worldDy = raw.world[a].y - raw.world[b].y;
+    imageEnergy += imageDx * imageDx + imageDy * imageDy;
+    worldEnergy += worldDx * worldDx + worldDy * worldDy;
   }
-  ratios.sort((x, y) => y - x);
-  return ((ratios[0] ?? 1) + (ratios[1] ?? ratios[0] ?? 1)) / 2;
-}
-
-function dist3(a: Vec3, b: Vec3): number {
-  return Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+  return Math.sqrt(imageEnergy / Math.max(worldEnergy, 1e-8));
 }
 
 function median(values: number[]): number {
@@ -169,8 +167,13 @@ export class HandSystem {
       label: raw.label,
       filtersX: Array.from({ length: LANDMARK_COUNT }, () => new OneEuroFilter(FILTER_MIN_CUTOFF, FILTER_BETA)),
       filtersY: Array.from({ length: LANDMARK_COUNT }, () => new OneEuroFilter(FILTER_MIN_CUTOFF, FILTER_BETA)),
-      scaleFilter: new OneEuroFilter(1.0, 1.5),
+      scaleFilter: new OneEuroFilter(SCALE_FILTER_MIN_CUTOFF, SCALE_FILTER_BETA),
+      worldFilters: Array.from(
+        { length: LANDMARK_COUNT * 3 },
+        () => new OneEuroFilter(WORLD_FILTER_MIN_CUTOFF, WORLD_FILTER_BETA),
+      ),
       norm: Array.from({ length: LANDMARK_COUNT }, (_, i) => mirrored(raw, i)),
+      world: raw.world.map((p) => ({ ...p })),
       logScale: Math.log(videoPxPerMeter(raw, vp)),
       pose: reading.pose,
       pinching: reading.pinching,
@@ -198,8 +201,21 @@ export class HandSystem {
     }
     slot.label = raw.label;
 
-    const rawLogScale = Math.log(videoPxPerMeter(raw, vp));
+    const measuredLogScale = Math.log(videoPxPerMeter(raw, vp));
+    const rawLogScale = Math.min(
+      slot.logScale + MAX_LOG_SCALE_STEP,
+      Math.max(slot.logScale - MAX_LOG_SCALE_STEP, measuredLogScale),
+    );
     slot.logScale = slot.scaleFilter.filter(rawLogScale, tSec);
+    for (let i = 0; i < LANDMARK_COUNT; i++) {
+      const p = raw.world[i];
+      const f = i * 3;
+      slot.world[i] = {
+        x: slot.worldFilters[f].filter(p.x, tSec),
+        y: slot.worldFilters[f + 1].filter(p.y, tSec),
+        z: slot.worldFilters[f + 2].filter(p.z, tSec),
+      };
+    }
     if (this.calibrating) {
       this.calibrationSamples.push(rawLogScale);
       this.restLogScale = median(this.calibrationSamples);
@@ -254,6 +270,7 @@ export class HandSystem {
       id: slot.id,
       label: slot.label,
       points,
+      world: slot.world,
       pose: slot.pose,
       closed: slot.pose === "pinch" || slot.pose === "fist",
       palm: average(points, PALM_IDS),
