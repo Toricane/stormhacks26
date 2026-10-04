@@ -1,5 +1,5 @@
 > [!NOTE]
-> This file contains the details of the challenge that we will be focusing on. This is copy pasted directly from the provided document.
+> This file contains the details of one of the two challenges that we will be focusing on. This is copy pasted directly from the provided document. We need to focus on either this one or `CHALLENGE_1.md`.
 
 **Fetching Reality: Bring a Static Dog Photo to Life in Real-Time**
 

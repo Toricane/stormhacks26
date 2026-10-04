@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Virtual Hands</title>
+  </head>
+  <body>
+    <video id="webcam" playsinline muted></video>
+    <canvas id="world"></canvas>
+    <canvas id="overlay"></canvas>
+    <div class="hud">
+      <div class="title">Virtual Hands</div>
+      <div class="pills">
+        <span id="status">Loading hand model…</span>
+        <span id="perf">– fps</span>
+        <span id="event">–</span>
+        <span class="pet">pet <i><b id="pet-bar"></b></i></span>
+      </div>
+    </div>
+    <div class="help">
+      Push your hand toward the screen to reach in · Pinch or fist on the ball to grab · Throw toward the
+      screen · Open palm on the dog to pet · <kbd>C</kbd> recalibrate rest · <kbd>D</kbd> debug ·
+      <kbd>R</kbd> reset ball
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
