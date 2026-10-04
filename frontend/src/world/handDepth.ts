@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { Hand } from "../hands/types";
+import type { Hand, Vec2 } from "../hands/types";
 import type { World } from "./world";
 
 export const PALM_LENGTH = 0.09;
@@ -10,7 +10,7 @@ const REACH_GAIN = 4;
 const VIRTUAL_MIN_DISTANCE = 0.25;
 const VIRTUAL_MAX_DISTANCE = 2.2;
 
-/** A hand with virtual depth for interactions, drawn at its tracked screen size. */
+/** A hand drawn and tested for contact at its virtual perspective size. */
 export type PlacedHand = Hand & {
   /** Virtual eye-to-palm distance in meters. */
   distance: number;
@@ -25,8 +25,19 @@ export function placeHand(hand: Hand, world: World): PlacedHand {
     VIRTUAL_MIN_DISTANCE,
     VIRTUAL_MAX_DISTANCE,
   );
+  // Scale the glove and its grip together so visible contact matches pickup.
+  const projectedPxPerMeter = world.focalPx() / distance;
+  const scale = projectedPxPerMeter / Math.max(hand.pxPerMeter, 1);
+  const palm = hand.palm;
+  const projectPoint = (point: Vec2): Vec2 => ({
+    x: palm.x + (point.x - palm.x) * scale,
+    y: palm.y + (point.y - palm.y) * scale,
+  });
   return {
     ...hand,
+    points: hand.points.map(projectPoint),
+    pinchPoint: projectPoint(hand.pinchPoint),
+    size: projectedPxPerMeter * PALM_LENGTH,
     distance,
     palmWorld: world.rayPoint(hand.palm, distance),
     handLengthPx: hand.pxPerMeter * PALM_LENGTH,

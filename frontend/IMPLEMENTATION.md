@@ -64,7 +64,7 @@ Classifies from **world landmarks**, so it's invariant to distance and in-plane 
 
 ### `render.ts`
 
-White hands with black outlines and black sleeves, shown from behind with palms facing into the scene. The real palm faces the webcam; the virtual hand keeps the same thumb position, screen motion, and observed size.
+White hands with black outlines and black sleeves, shown from behind with palms facing into the scene. The real palm faces the webcam; the virtual palm follows its mirrored screen position, while landmarks and glove widths scale with virtual depth.
 
 - Draw order: a black sleeve that widens toward the elbow with a subtle cuff, followed by fingers and thumb behind the hand body. When a fingertip folds back into the hand, its distal segments are hidden and the proximal segment forms the visible knuckle. Extended fingers and the thumb retain their tracked positions. One outline pass followed by a solid fill merges overlapping pieces into a cohesive silhouette with no interior contours or crease lines.
 - Pinch shows an amber ring at the pinch point. Petting shows a green ring around the palm. A pose label sits under the wrist.
@@ -87,7 +87,7 @@ White hands with black outlines and black sleeves, shown from behind with palms 
 Turns a `Hand` into a `PlacedHand`:
 
 - `distance = clamp(0.45 + reach × 4, 0.25, 2.2)` m from the eye. A comfortable ~25 cm push maps to about 1 m of virtual reach.
-- Points, pinch point, and drawing size pass through directly from the mirrored, smoothed screen landmarks. The drawing grows as the real hand moves closer to the webcam; virtual depth only controls interactions and ground shadows.
+- Points and pinch point are rescaled together around the palm by `k = (focalPx / distance) / pxPerMeter`. Drawing size and pickup tolerance use `focalPx / distance × PALM_LENGTH`, preserving perspective and avoiding hand-tilt-dependent pickup tolerance. The glove shrinks as you reach deeper into the scene.
 - `palmWorld` is the 3D palm position. `handLengthPx` is the *observed* palm length, used to normalize speeds.
 - `drawHandShadows`: an ellipse on the ground under `palmWorld`, squashed by viewing angle and faded with height. It's only visible once the ground under the hand is on screen, i.e. when reaching out.
 

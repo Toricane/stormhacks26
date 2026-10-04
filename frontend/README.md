@@ -19,7 +19,7 @@ Other scripts: `npm run build` (typecheck + production build into `dist/`), `npm
 ## How to use it
 
 1. **Calibrate:** when your hands first appear, hold them at a comfortable resting position for about a second. The HUD says "Calibrating" until it's done. Press `C` any time to recalibrate (e.g. after moving your chair).
-2. **Reach in:** push your hand toward the screen to reach deeper into the scene. The hand mirrors its position and apparent size in the webcam, growing as it gets closer, and casts a shadow on the ground once it's far enough out.
+2. **Reach in:** push your hand toward the screen to reach deeper into the scene. The white glove shrinks with virtual distance and casts a shadow on the ground once it's far enough out. Its pinch point and pickup tolerance scale with it.
 3. **Grab:** pinch (thumb + index) or make a fist on the ball. The ball glows when it's within reach and turns amber while held.
 4. **Throw:** swing toward the screen and let go. Faster swings throw farther. A slow release just drops the ball. The ball returns to its stand once it stops rolling.
 5. **Pet:** reach the dog with an open palm and stroke it. Hearts appear and the pet meter in the top bar fills.
