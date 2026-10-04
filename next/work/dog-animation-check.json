@@ -1,0 +1,40 @@
+{
+  "source": "/Users/mba/Downloads/Auto_rig_-_output.model_url_-_tripo_rigging_3c506028-6bd1-449c-9115-5db7d6b8196b.glb",
+  "output": "/Users/mba/Desktop/coding/stormhacks2026/public/dog-animated.glb",
+  "joints": 21,
+  "clips": [
+    {
+      "name": "Idle",
+      "channels": 2
+    },
+    {
+      "name": "Tail wag",
+      "channels": 2
+    },
+    {
+      "name": "Walk",
+      "channels": 17
+    }
+  ],
+  "preservedBinary": true,
+  "walkMaxFootError": 0.0011703687934076054,
+  "walkMaxStanceHeightError": 0.0009541099726823321,
+  "legs": [
+    {
+      "toe": 3,
+      "maxError": 2.848732705698747e-8
+    },
+    {
+      "toe": 6,
+      "maxError": 2.8554359431059882e-8
+    },
+    {
+      "toe": 11,
+      "maxError": 0.0006227184147216366
+    },
+    {
+      "toe": 15,
+      "maxError": 0.0011703687934076054
+    }
+  ]
+}
